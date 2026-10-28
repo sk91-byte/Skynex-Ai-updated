@@ -1,0 +1,920 @@
+# MASTER ENGINEERING PROMPT: SKY NEX AI FOUNDATIONAL HARDENING
+
+## 1. YOUR ROLE
+
+Act as a principal software engineer, AI systems architect, application security engineer, QA engineer, and enterprise SaaS product architect.
+
+You are working on **SkyNex AI**, an existing full-stack Brand Governance and Compliance Platform.
+
+Your mission is to strengthen its foundational logic so real companies can trust it to review marketing content against approved brand guidelines, product facts, terminology, commercial information, legal requirements, and visual identity rules.
+
+This is an implementation task, not a brainstorming exercise.
+
+You must inspect the existing codebase, understand the current implementation, identify defects, implement improvements directly in the existing project, add regression tests, run the available checks, and report verified results.
+
+**Do not stop after providing an audit report or a development plan. Continue with implementation wherever the available environment permits.**
+
+Do not claim that any task is complete unless the corresponding code changes have been made and the relevant verification has been performed.
+
+---
+
+## 2. NON-NEGOTIABLE PROJECT PRESERVATION RULES
+
+The existing application is already developed. Preserve it.
+
+The known technology stack includes:
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Node.js and Express
+- Gemini integration through `@google/genai`
+- Zod for validation
+- Tesseract.js and Sharp for image processing and OCR
+- `pdf-parse` and Mammoth for document extraction
+- JSON-based persistent storage in `.skynex-persistent-store.json`
+
+These are known project details, not permission to assume every dependency or implementation is still exactly as described. Inspect the actual repository and its package files first.
+
+Mandatory constraints:
+
+1. Do not rebuild the application from scratch.
+2. Do not replace the existing frontend, backend, framework, or design system unnecessarily.
+3. Do not remove existing features simply because their implementations are imperfect.
+4. Do not delete real user data, brand profiles, rules, product catalogs, or review history.
+5. Do not restore demo data or automatically seed demo brands in production.
+6. Do not weaken TypeScript types to make the build pass.
+7. Do not introduce `any`, unsafe type assertions, silent error swallowing, or placeholder implementations as shortcuts.
+8. Do not expose Gemini API keys, secrets, internal server errors, or confidential brand information.
+9. Do not make unrequested UI redesigns.
+10. Preserve existing API contracts where practical. If a breaking change is necessary, update every affected caller and add appropriate migration handling.
+11. Do not report that tests pass, files were edited, or features work unless verified.
+12. Never overwrite existing project configuration or persistence files without understanding their contents and the impact.
+
+If a required feature is already correctly implemented, verify it and preserve it instead of duplicating it.
+
+If the environment cannot access a file, run a command, install a dependency, or execute a test, clearly identify the limitation and continue with tasks that can be completed.
+
+---
+
+## 3. FIRST: MAP THE REAL APPLICATION
+
+Before modifying code, inspect the repository.
+
+Read the relevant portions of:
+
+- `package.json`
+- `src/types.ts`
+- `server.ts`
+- Existing audit-engine functions
+- Gemini prompt and invocation logic
+- Zod schemas
+- Brand Knowledge workspace
+- Rule creation and editing flows
+- Product catalog management
+- Content upload and parsing pipeline
+- Review Content workspace
+- Accept, Edit, Reject and Approve & Finalize handlers
+- Review History and diff viewer
+- Manager Insights / Brand Clarity Loop
+- Persistence and API route handlers
+- Existing tests and build configuration
+- Authentication and authorization code, if present
+
+Trace the actual execution path:
+
+CONTENT INPUT
+→ FILE EXTRACTION
+→ BRAND AND RULE RESOLUTION
+→ DETERMINISTIC VALIDATION
+→ CONTEXTUAL AI ANALYSIS
+→ FINDING VALIDATION AND RECONCILIATION
+→ HUMAN REVIEW
+→ CORRECTION
+→ RE-AUDIT
+→ FINAL APPROVAL
+→ PERSISTENCE AND AUDIT HISTORY
+→ MANAGER INSIGHTS
+
+Identify where each operation happens, what data it receives, what it returns, and which parts of the pipeline can fail.
+
+Create a concise internal implementation checklist and prioritize defects by risk.
+
+Then begin implementing the fixes. Do not spend the entire task documenting the architecture.
+
+---
+
+## 4. DEFINE THE TRUST BOUNDARIES
+
+SkyNex must maintain a strict separation between authoritative company knowledge, deterministic code, AI interpretation, and human decisions.
+
+### Deterministic engine responsibilities
+
+Use deterministic TypeScript logic for:
+
+- Exact product and SKU verification
+- Approved product names and prohibited aliases
+- Numeric prices and promotional prices
+- Currency and billing-period validation
+- Dates and effective-date checks
+- Exact prohibited terminology where the rule is explicitly deterministic
+- Rule eligibility and status
+- Required disclaimer presence when the applicable rule can be checked deterministically
+- Structured product facts and catalog consistency
+- Permission checks
+- Review-state transitions
+- Audit completeness
+- Recurrence counting
+- Persistence integrity
+
+Do not delegate these checks to Gemini.
+
+### Gemini responsibilities
+
+Use Gemini for tasks requiring semantic interpretation, such as:
+
+- Tone and voice analysis
+- Contextual terminology interpretation
+- Ambiguous claims
+- Implied or indirect promises
+- Readability and messaging consistency
+- Potentially unsupported claims
+- Context-sensitive suggestions for improvement
+- Interpretation of extracted brand guidelines for human review
+
+Gemini must never independently establish the truth of a commercial fact or override an approved company value.
+
+An unsupported claim is not automatically a false claim. Distinguish between:
+
+- A verified contradiction
+- A claim without sufficient supporting evidence
+- A contextual or stylistic recommendation
+- A case requiring human verification
+
+### Human decision responsibilities
+
+Authorized people must retain control over:
+
+- Approving newly extracted rules
+- Resolving conflicting authoritative sources
+- Accepting, editing or rejecting suggested corrections
+- Resolving high-risk ambiguous cases
+- Approving publication readiness
+- Granting exceptions where policy permits them
+
+AI-generated output must never directly authorize publishing.
+
+---
+
+## 5. RULE ELIGIBILITY AND SOURCE GOVERNANCE
+
+Inspect and strengthen the BrandRule model and every code path that evaluates rules.
+
+The existing blueprint specifies that only approved, complete rules should trigger findings. Preserve this invariant and implement it consistently.
+
+A rule must not be evaluated as active unless:
+
+- Its status is `Approved`.
+- Its required fields are present and valid.
+- Its source is identifiable.
+- Its scope applies to the selected brand and content.
+- Its effective period includes the review time.
+- It is not superseded, expired, or otherwise inapplicable.
+- Any required approval metadata is valid.
+
+Adapt the requirements to the real schema without breaking existing valid records.
+
+### Source conflicts
+
+Support clear authority and applicability rules for company knowledge.
+
+Where the current data model allows, track:
+
+- Source ID
+- Source type
+- Source version
+- Rule version
+- Approval status
+- Effective start and end
+- Last updated time
+- Approving user
+- Scope or applicable product/campaign
+- Supersession relationship
+
+Do not invent a universal precedence order that silently resolves every conflict.
+
+A newer source should not automatically override a more authoritative source unless the company's configured policy explicitly says so.
+
+If two applicable authoritative sources conflict and the conflict cannot be resolved deterministically:
+
+1. Record the conflict.
+2. Identify the conflicting values and sources.
+3. Mark the affected check as requiring human resolution.
+4. Prevent the affected content from receiving an unconditional clean result.
+5. Preserve unrelated valid findings.
+
+### Rule extraction
+
+When importing rules from PDFs or other guideline documents:
+
+1. Extract candidate rules.
+2. Preserve their source location when possible.
+3. Validate the candidate schema.
+4. Identify incomplete, ambiguous, duplicate, or contradictory candidates.
+5. Show extracted rules for human confirmation.
+6. Do not automatically mark extracted rules as approved.
+7. Preserve the original document and its version reference.
+8. Keep the rule-import operation recoverable if an error occurs.
+
+Add regression tests for draft rules, deprecated rules, incomplete rules, expired rules, conflicting sources, and rules scoped to the wrong brand.
+
+---
+
+## 6. MAKE AUDIT FINDINGS EVIDENCE-BASED
+
+Inspect the current `AuditFinding` interface and actual findings returned by every engine.
+
+Improve the model as needed while maintaining compatibility with existing consumers.
+
+A finding should carry, where applicable:
+
+- Stable finding ID
+- Audit ID
+- Content version ID
+- Rule ID and version
+- Finding category
+- Finding type
+- Severity
+- Original flagged text
+- Exact source location or bounding box
+- Explanation
+- Evidence reference
+- Evidence source and version
+- Suggested replacement, if available
+- Confidence or uncertainty metadata when meaningful
+- Validation state
+- Human review outcome
+- Timestamps
+
+Use explicit types rather than unstructured strings wherever practical.
+
+### Evidence requirements
+
+Every finding must identify why it was generated.
+
+For deterministic findings, include the matched rule or catalog record, expected value, observed value, and relevant source reference.
+
+For AI findings, require references to actual input evidence, relevant approved rules, or supporting sources provided to the model.
+
+Do not allow the model to invent rule IDs, product IDs, source references, or evidence locations.
+
+Validate every returned reference against the actual request context.
+
+Do not represent an AI-generated explanation as verified evidence merely because the model supplied it.
+
+If the AI cannot produce sufficient evidence, downgrade the finding to an appropriately uncertain state or request human verification.
+
+### Duplicate reconciliation
+
+The deterministic engine and Gemini may detect the same underlying issue.
+
+Implement reconciliation so that:
+
+- Identical findings are not presented repeatedly.
+- Distinct violations in the same sentence are not incorrectly merged.
+- Separate occurrences can retain their individual locations.
+- A deterministic fact conflict is not replaced by a weaker AI suggestion.
+- Original evidence and provenance remain intact.
+- The reconciliation step does not invent a new finding.
+
+Use stable identifiers and explicit matching rules where practical.
+
+---
+
+## 7. HARDEN DETERMINISTIC PRODUCT AND PRICE CHECKING
+
+Inspect the existing catalog matching implementation before changing it.
+
+Validate:
+
+- Exact product names and approved aliases
+- SKUs with case-insensitive matching only where the SKU policy allows it
+- Currency symbols and currency codes
+- Thousand separators and decimal formatting
+- Whitespace variations
+- Regular versus promotional prices
+- Currency-specific decimal precision
+- Billing periods
+- Product status
+- Effective dates for prices and promotions
+- Multiple products in a single advertisement
+- Multiple price mentions in one draft
+- Ambiguous product references
+- Unsupported or missing catalog information
+
+Do not use naive substring replacement.
+
+Do not treat a number as a price merely because it resembles a price. Establish sufficient product and context association before reporting a confirmed mismatch.
+
+Never silently select a catalog item when multiple candidates are plausible.
+
+For every applicable finding, explain the observed value, approved value, product identity, catalog source, and relevant version.
+
+Create tests for valid content, incorrect prices, ambiguous matches, incorrect SKUs, promotional prices, currency mismatches, formatting variants, and multiple products.
+
+---
+
+## 8. HARDEN GEMINI INTEGRATION
+
+Inspect the actual Gemini SDK usage, prompt construction, schemas, API routes, and error handling.
+
+### Structured output
+
+Require structured responses validated by Zod.
+
+Validate:
+
+- Top-level response structure
+- Required fields
+- Allowed enums
+- String and array lengths
+- Valid severity values
+- Rule and evidence references
+- Suggested replacement types
+- Source locations
+- Unsupported extra fields where strict validation is appropriate
+
+Do not trust a model response just because it parses as JSON.
+
+Reject invalid references and unsupported factual assertions.
+
+Handle missing fields explicitly.
+
+Never use unsafe casts to force invalid output into a valid TypeScript type.
+
+### Failure handling
+
+Handle:
+
+- Network errors
+- Timeouts
+- Rate limits
+- Server errors
+- Empty responses
+- Malformed JSON
+- Schema validation failures
+- Model refusal or unavailable model
+- Oversized inputs
+- Partial analysis
+- Retry exhaustion
+
+Use bounded retries with backoff only for appropriate transient failures. Avoid retrying permanent validation errors indefinitely.
+
+Do not allow an AI failure to erase deterministic findings.
+
+If Gemini fails:
+
+- Preserve valid deterministic results.
+- Record the contextual-analysis failure.
+- Mark the audit incomplete if required contextual checks did not finish.
+- Provide a safe retry path.
+- Do not issue a full-compliance result.
+- Avoid exposing secrets or raw internal exceptions to users.
+
+Track which required checks actually ran, which passed, which failed, and which remain unresolved.
+
+---
+
+## 9. MAKE ONE-CLICK CHANGE SAFE
+
+Inspect the existing Accept, Edit, Reject and correction-application handlers.
+
+A suggested correction must not bypass the audit engine.
+
+Implement this lifecycle:
+
+1. Capture the original content and its version.
+2. Associate the correction with the finding and relevant rule.
+3. Validate the proposed replacement.
+4. Check that it does not introduce prohibited terminology or contradict approved facts.
+5. Ensure that the correction applies to the intended text occurrence.
+6. Show the proposed change to the reviewer.
+7. Apply it only after the required human action.
+8. Create a new content version.
+9. Preserve the original text and previous decisions.
+10. Re-run applicable checks against the changed content.
+11. Recalculate audit completeness and outstanding findings.
+12. Require the appropriate approval before finalization.
+
+Avoid global string replacements that accidentally modify unrelated occurrences.
+
+Protect against stale edits. If the content has changed since the finding was generated, reject or reconcile the outdated patch rather than applying it blindly.
+
+A correction must not automatically resolve an unrelated finding.
+
+A draft must not be finalized simply because the user accepted one suggestion.
+
+---
+
+## 10. SEPARATE FINDING STATUS FROM REVIEW DECISIONS
+
+Inspect the existing types and UI state transitions.
+
+The system should distinguish what the audit engine concluded from what a human decided.
+
+### Finding lifecycle
+
+Use or adapt explicit states such as:
+
+- Detected
+- Needs verification
+- Confirmed
+- Not a violation
+- Resolved through correction
+- Superseded by a later content version
+
+### Review decision lifecycle
+
+Use or adapt explicit states such as:
+
+- Pending
+- Accepted
+- Edited
+- Rejected
+- Escalated
+- Exception approved
+
+Do not force these concepts into one status field.
+
+A rejected suggestion does not prove that the finding was false.
+
+An accepted correction does not automatically prove that the entire draft is compliant.
+
+An authorized exception must remain distinguishable from an ordinary pass.
+
+Define valid state transitions and validate them on the backend. The frontend must not be the security boundary.
+
+Record the actor, timestamp, previous state, new state, reason where required, and associated content/rule versions.
+
+---
+
+## 11. ROLE-BASED AUTHORIZATION AND TENANT ISOLATION
+
+Inspect the current role system and determine whether it is genuine authorization or merely a UI persona switch.
+
+If the application currently uses demo role switching, do not represent that as production-grade access control.
+
+Where authentication infrastructure exists, enforce permissions on the server for every protected operation.
+
+Define or adapt permissions for:
+
+- Content creators
+- Brand reviewers
+- Marketing managers
+- Brand administrators
+
+Enforce authorization for:
+
+- Reading brand information
+- Uploading content
+- Creating or modifying rules
+- Approving rules
+- Editing product facts
+- Accepting corrections
+- Rejecting findings
+- Finalizing drafts
+- Approving exceptions
+- Viewing manager insights
+- Managing users and roles
+
+For a multi-company system:
+
+- Scope every brand and audit operation to the authenticated tenant.
+- Prevent cross-tenant record access and modification.
+- Do not trust brand IDs supplied by the browser without authorization checks.
+- Avoid insecure direct object references.
+- Keep sensitive data out of client-visible errors and logs.
+
+If real authentication or tenant infrastructure does not exist, document that limitation and implement safe server-side abstractions only where they fit the current architecture. Do not pretend a dropdown is authentication.
+
+---
+
+## 12. DOCUMENT EXTRACTION AND OCR RELIABILITY
+
+Inspect PDF, DOCX, text, Markdown, and image ingestion.
+
+For each upload, record the extraction result and its limitations.
+
+Where supported, track:
+
+- File type and size
+- Page count
+- Extracted text length
+- Extraction errors
+- OCR confidence or equivalent quality signals
+- Pages or regions that could not be processed
+- Source locations
+- Unsupported file features
+- Required checks that could not be completed
+
+Do not invent extraction confidence when the underlying library does not provide a reliable measure.
+
+Add safeguards for:
+
+- Corrupt documents
+- Empty documents
+- Scanned PDFs
+- Mixed text and image pages
+- Missing footnotes
+- OCR confusion between similar characters
+- Unsupported file types
+- Excessively large uploads
+- Malformed images
+- Parser timeouts and failures
+
+Validate file content rather than relying solely on extensions or MIME types.
+
+Enforce upload limits, use safe parsing paths, and prevent malformed files from crashing the server.
+
+If required text cannot be reliably extracted, flag the audit as incomplete and request a replacement file or manual review.
+
+Do not classify missing or unreadable text as compliant.
+
+---
+
+## 13. AUDIT COMPLETENESS AND COMPLIANCE STATUS
+
+Implement a clear distinction between:
+
+- Findings severity
+- Individual check outcomes
+- Overall review completeness
+- Publication readiness
+
+Possible check outcomes include:
+
+- Passed
+- Failed
+- Needs human verification
+- Not applicable
+- Not run
+- Error
+
+Determine required checks from the applicable brand policy, content type, and configured workflow.
+
+A review can be finalized only when all mandatory checks and required decisions satisfy the configured policy.
+
+At minimum:
+
+- An unresolved critical blocker prevents ordinary approval.
+- A failed required check cannot be ignored because another check passed.
+- A failed Gemini call cannot become a clean audit.
+- Incomplete extraction cannot silently pass.
+- An unresolved conflict in authoritative facts cannot be treated as a verified result.
+- A warning or stylistic recommendation should not automatically become a hard blocker unless policy requires it.
+
+Do not use a simplistic average score to determine whether content is safe to publish.
+
+If a compliance score already exists, preserve it for compatibility where appropriate, but ensure it cannot override hard blockers or incomplete mandatory checks.
+
+---
+
+## 14. VERSIONED KNOWLEDGE AND AUDIT HISTORY
+
+Inspect `.skynex-persistent-store.json` and the existing persistence functions.
+
+Preserve the current storage format where practical, but fix data-integrity risks.
+
+Each audit should be reproducible from its recorded context as far as the retained data permits.
+
+Capture:
+
+- Original content or a protected reference to it
+- Content version
+- Brand identity
+- Applicable rule versions
+- Relevant product catalog versions
+- Audit configuration version
+- AI model and prompt/configuration version where available
+- Extraction outcome
+- Deterministic findings
+- AI findings
+- Reconciliation outcome
+- Human decisions
+- Corrections and content diffs
+- Finalization status
+- Relevant timestamps
+
+Never silently rewrite the historical meaning of an earlier audit when rules or product prices change.
+
+### Persistence integrity
+
+Inspect how writes are performed.
+
+Where necessary, implement safe write operations, validation, recovery from malformed records, and migration handling.
+
+Prevent concurrent updates from silently overwriting each other. Use a serialization or locking strategy appropriate to the existing server architecture.
+
+If the JSON store cannot safely support the current concurrency or multi-tenant requirements, document the limitation and recommend a migration path. Do not introduce a database migration without confirming the available environment and project constraints.
+
+Never reset the store to make a migration easier.
+
+---
+
+## 15. BRAND CLARITY LOOP: CORRECT RECURRENCE LOGIC
+
+Preserve the existing recurrence policy unless the actual implementation contradicts it or a documented product requirement requires a change.
+
+The existing blueprint specifies these default activation conditions:
+
+- At least 3 occurrences
+- Across at least 2 distinct drafts
+- Within a 7-day window
+
+The alert activates only when all configured conditions are satisfied.
+
+Inspect and implement the recurrence calculation so that:
+
+1. Occurrences are linked to actual findings and drafts.
+2. Repeated phrases within one draft do not count as multiple distinct drafts.
+3. Duplicate findings do not inflate counts.
+4. Retries and repeated processing of the same audit do not double-count events.
+5. Draft revisions are handled consistently with the chosen recurrence policy.
+6. Different brands and unrelated rules do not get merged into one pattern.
+7. The applicable time window is calculated consistently.
+8. Resolved or superseded issues are handled explicitly.
+9. Rule versions remain visible.
+10. Every alert can show its underlying supporting occurrences.
+
+Use a stable pattern identity, such as the applicable brand, rule or normalized issue category, and relevant scope.
+
+Do not merge every issue in the same broad category into one recurrence pattern.
+
+### Root-cause analysis
+
+Distinguish observed evidence from inferred explanations.
+
+Potential investigation categories:
+
+- Unclear guideline
+- Outdated company information
+- Training need
+- Repeated agency or campaign issue
+- Possible system detection problem
+- Unknown cause
+
+The system may suggest these categories, but it must not present a guessed cause as an established fact.
+
+Allow managers to record an investigation conclusion and corrective action. Track whether the issue recurs after the action.
+
+Add boundary tests for occurrence counts, distinct drafts, exact time-window limits, duplicate events, rule updates and brand isolation.
+
+---
+
+## 16. SECURITY AND CONFIDENTIALITY
+
+Treat all user-uploaded content, documents, extracted text, and model outputs as untrusted.
+
+Implement or verify:
+
+- Server-side secret management
+- No API keys in frontend bundles
+- Input validation at every external API boundary
+- Safe file processing
+- File size and request limits
+- Protection against path traversal
+- Authorization for all sensitive operations
+- Tenant isolation where applicable
+- Prompt-injection resistance
+- Model output validation
+- Safe error messages
+- Restricted logging of sensitive content
+- Appropriate retention and deletion behavior
+- Explicit disclosure of AI processing and external service use
+
+Do not send confidential brand material to a third-party AI service without the configured and disclosed processing policy permitting it.
+
+Do not claim that content is encrypted, private, deleted, or never retained unless the actual infrastructure supports that claim.
+
+Never give the model direct unrestricted access to tools that modify rules, approve content, change permissions, or publish advertisements.
+
+A model response must be treated as an untrusted proposal, not executable authority.
+
+---
+
+## 17. CREATE A REAL REGRESSION TEST SUITE
+
+Inspect the project's existing test framework before choosing or installing anything.
+
+Add automated tests for the following scenarios.
+
+### Rule engine
+
+- Approved rule triggers correctly.
+- Draft rule is ignored.
+- Deprecated rule is ignored.
+- Incomplete rule is rejected or excluded.
+- Expired rule does not apply.
+- Rule scoped to another brand does not apply.
+- Conflicting approved facts trigger human resolution.
+- Superseded versions remain available for historical audits.
+
+### Deterministic facts
+
+- Incorrect price is detected.
+- Correct price is accepted.
+- Currency formatting variations work.
+- Regular and promotional prices are distinguished.
+- Ambiguous product matches do not produce fabricated certainty.
+- SKU and product identity checks are correct.
+- Multiple prices and multiple products are handled independently.
+
+### Gemini
+
+- Valid structured response is accepted.
+- Malformed JSON is handled.
+- Invalid enums and unknown rule IDs are rejected.
+- Unsupported evidence references are rejected.
+- Model timeout preserves deterministic findings.
+- Rate limiting follows the bounded retry policy.
+- Invalid output cannot create a compliant audit.
+- Prompt injection in uploaded content does not override policy.
+
+### Human review
+
+- Accept works for authorized users.
+- Edit validates the replacement.
+- Reject preserves the finding and records the decision.
+- Unauthorized users cannot approve rules or finalize drafts.
+- Stale corrections are rejected or reconciled.
+- Finalization checks the complete audit state.
+- Exceptions are distinguishable from compliance passes.
+
+### Documents
+
+- Valid PDF, DOCX, text and image uploads work.
+- Corrupt files fail safely.
+- Empty or unreadable required content does not pass.
+- Unsupported formats are rejected clearly.
+- OCR uncertainty is preserved.
+
+### History and recurrence
+
+- Previous audit versions remain reproducible.
+- Rule changes do not rewrite past decisions.
+- Repeated occurrences in one draft do not inflate distinct-draft counts.
+- Duplicate events do not inflate recurrence.
+- Alerts respect the configured time window.
+- Cross-brand recurrence is prevented.
+- Manager investigations preserve evidence and corrective-action history.
+
+### End-to-end
+
+Create at least these complete scenarios:
+
+1. A fully compliant advertisement.
+2. An advertisement with an incorrect price.
+3. An advertisement with a prohibited claim.
+4. A draft with an ambiguous unsupported claim.
+5. A document with extraction failure.
+6. A Gemini failure with deterministic findings preserved.
+7. A correction that introduces a new violation.
+8. A rule conflict requiring human resolution.
+9. A recurring issue that crosses the configured threshold.
+10. An unauthorized user attempting to finalize a draft.
+
+Use synthetic test data. Do not use real confidential company information in fixtures.
+
+For each test, assert the actual returned state and important evidence fields, not merely that the API returned HTTP 200.
+
+---
+
+## 18. REQUIRED IMPLEMENTATION WORKFLOW
+
+Follow this sequence.
+
+### Step A: Baseline
+
+- Inspect the repository.
+- Identify existing architecture and tests.
+- Run the current build and test suite if available.
+- Record existing failures separately from new failures.
+- Identify high-risk code paths.
+
+### Step B: Plan
+
+Prioritize the highest-risk defects:
+
+1. Incorrect compliance decisions.
+2. Missing or fabricated evidence.
+3. Unsafe corrections.
+4. Unauthorized approval and data access.
+5. Silent AI or extraction failures.
+6. Corrupted or misleading audit history.
+7. Incorrect recurrence calculations.
+8. Remaining maintainability improvements.
+
+### Step C: Implement
+
+Make small, coherent changes.
+
+For each change:
+
+- Explain the defect.
+- Identify the affected files.
+- Implement the fix.
+- Add a regression test.
+- Run the relevant test.
+- Check existing callers and API contracts.
+
+Do not make a giant unverified rewrite.
+
+### Step D: Integrate
+
+Verify that the frontend and backend agree on:
+
+- Types
+- Validation schemas
+- Status values
+- Finding IDs
+- Audit IDs
+- Content versions
+- Error handling
+- Authorization decisions
+
+### Step E: Verify
+
+Run all available relevant checks:
+
+- TypeScript compilation
+- Production build
+- Unit tests
+- Integration tests
+- End-to-end tests, if configured
+- Security-related tests
+- Persistence and migration tests
+
+Fix regressions caused by your changes.
+
+Do not suppress failures merely to produce a green build.
+
+### Step F: Report
+
+Provide a final implementation report with:
+
+1. Files inspected.
+2. Defects found.
+3. Changes actually implemented.
+4. Tests added.
+5. Exact commands run.
+6. Results of each command.
+7. Existing failures that remain.
+8. Known security limitations.
+9. Features that still require manual configuration.
+10. Recommended next steps.
+
+Separate completed, partially completed, unverified, and blocked tasks.
+
+Do not claim production readiness based solely on a successful build.
+
+---
+
+## 19. ACCEPTANCE CRITERIA
+
+The foundational hardening task is complete only when the following are verified to the extent supported by the environment:
+
+- Only applicable, approved rules can generate authoritative findings.
+- Conflicting company facts are surfaced instead of silently guessed.
+- Deterministic fact checks remain deterministic.
+- AI findings have validated evidence and references.
+- Invalid AI output cannot become an automatic compliance pass.
+- AI failures preserve completed checks and mark incomplete reviews correctly.
+- Suggested corrections cannot bypass validation or human authorization.
+- Finding status and human decisions are separate.
+- Required review transitions are enforced server-side.
+- Historical audits preserve their original governing context.
+- Unreadable required content cannot silently pass.
+- Recurrence counts use distinct drafts and avoid duplicate events.
+- Sensitive operations enforce the permissions actually supported by the application.
+- Persistence changes do not silently erase or corrupt existing records.
+- Regression tests cover the major failure modes.
+- The project builds successfully and all available tests have been evaluated, with any remaining failures explicitly reported.
+
+Do not equate passing these criteria in a local prototype with certification, regulatory compliance, or production security.
+
+---
+
+## 20. FINAL INSTRUCTION
+
+Start by examining the actual project files and the existing audit pipeline.
+
+Then implement the most critical fixes first, add regression tests, and continue through the roadmap without unnecessarily interrupting the existing workflow.
+
+Prioritize correctness, evidence, predictable failure handling, data integrity, security boundaries, and human control over cosmetic improvements.
+
+Preserve the current SkyNex AI product identity and interface.
+
+**The objective is not to make SkyNex produce more findings. The objective is to make its findings trustworthy, its uncertainty visible, its corrections safe, and its decisions auditable.**
+
+Begin implementation now.
