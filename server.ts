@@ -4140,48 +4140,44 @@ function extractRulesHeuristically(
 
 function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string }[], filename: string): ExtractedPdfRule[] {
   const rules: ExtractedPdfRule[] = [];
-  const idPattern = /^[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}$/;
- const rowSourcePattern = /\b(Approved|Critical|Warning|Info)\s+([A-Z][A-Z0-9-]+(?:\s+\u00A7\s*\d+|\s+row\s+\d+))\s*$/i;
-  const topicWords = new Set(['Approved knowledge', 'Client separation', 'Conflicting sources', 'Evidence', 'Extraction uncertainty', 'Terminology', 'Claims', 'Disclaimer', 'Product facts', 'Tone & Voice', 'Security']);
+  const idPattern = /\b[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}\b/g;
+  const rowSourcePattern = /\b(Approved|Critical|Warning|Info)\s+([A-Z][A-Z0-9-]+(?:\s+\u00A7\s*\d+|\s+row\s+\d+))/i;
+  const topicWords = [
+    'Approved knowledge', 'Client separation', 'Conflicting sources',
+    'Extraction uncertainty', 'Product facts', 'Tone & Voice',
+    'Terminology', 'Disclaimer', 'Security', 'Evidence', 'Claims'
+  ].sort((a, b) => b.length - a.length);
 
   for (const page of pagesData) {
-    const lines = page.text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    const headerIndex = lines.findIndex(line => /^Rule ID\s+(Topic|Category)\b/i.test(line));
-    if (headerIndex < 0) continue;
-    const rowIndexes = lines.map((line, index) => idPattern.test(line) ? index : -1).filter(index => index >= 0);
+    const text = page.text.replace(/\s+/g, ' ').trim();
+    const headerMatch = text.match(/Rule ID\s+(?:Topic|Category)\s+Rule statement\s+(?:Status|Severity)\s+Source reference/i);
+    if (!headerMatch || headerMatch.index === undefined) continue;
 
-    for (let rowIndex = 0; rowIndex < rowIndexes.length; rowIndex++) {
-      const start = rowIndexes[rowIndex];
-      const end = rowIndexes[rowIndex + 1] || lines.length;
-      const sourceId = lines[start];
-      const block = lines.slice(start + 1, end);
-      const sourceMatchIndex = block.findIndex(line => rowSourcePattern.test(line));
-      if (sourceMatchIndex < 0) continue;
-      const sourceMatch = block[sourceMatchIndex].match(rowSourcePattern);
-      if (!sourceMatch) continue;
+    const tableText = text.slice(headerMatch.index + headerMatch[0].length).trim();
+    const rowMatches = [...tableText.matchAll(idPattern)];
+    for (let rowIndex = 0; rowIndex < rowMatches.length; rowIndex++) {
+      const match = rowMatches[rowIndex];
+      const sourceId = match[0];
+      const start = match.index || 0;
+      const end = rowMatches[rowIndex + 1]?.index ?? tableText.length;
+      const rowText = tableText.slice(start + sourceId.length, end).trim();
+      const sourceMatch = rowText.match(rowSourcePattern);
+      if (!sourceMatch || sourceMatch.index === undefined) continue;
+
       const severityText = sourceMatch[1].toLowerCase();
       const sourceRef = sourceMatch[2].trim();
-      const beforeSource = block.slice(0, sourceMatchIndex);
-      if (beforeSource.length < 2) continue;
+      const beforeSource = rowText.slice(0, sourceMatch.index).trim();
+      const topic = topicWords.find(candidate => beforeSource.toLowerCase().startsWith(candidate.toLowerCase()));
+      if (!topic) continue;
 
-      let categoryLabel = beforeSource[0];
-      let statementLines = beforeSource.slice(1);
-      const twoLineTopic = `${beforeSource[0]} ${beforeSource[1]}`;
-      if (topicWords.has(twoLineTopic)) {
-        categoryLabel = twoLineTopic;
-        statementLines = beforeSource.slice(2);
-      }
-      if (!topicWords.has(categoryLabel) && /^(Tone|Product)\b/i.test(categoryLabel) && beforeSource.length >= 2) {
-        categoryLabel = twoLineTopic;
-        statementLines = beforeSource.slice(2);
-      }
-      const statement = statementLines.join(' ').replace(/\s+/g, ' ').trim();
+      const statement = beforeSource.slice(topic.length).replace(/\s+/g, ' ').trim();
       if (statement.length < 20) continue;
 
+      const ruleId = `EXT-${Date.now()}-${rules.length + 1}`;
       const categoryRule: ExtractedPdfRule = {
-        id: `EXT-${Date.now()}-${rules.length + 1}`,
-        tempId: `EXT-${Date.now()}-${rules.length + 1}`,
-        title: `${categoryLabel}: ${statement.slice(0, 72)}${statement.length > 72 ? '...' : ''}`,
+        id: ruleId,
+        tempId: ruleId,
+        title: `${topic}: ${statement.slice(0, 72)}${statement.length > 72 ? '...' : ''}`,
         category: 'Legal & Compliance',
         ruleStatement: statement,
         targetPatterns: [],
@@ -4203,10 +4199,11 @@ function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string
         explanation: `Extracted from the structured ${sourceId} row on Page ${page.pageNumber}.`
       };
 
-      if (/\b(logo|colour|color|palette|font|typography|clear space|lockup)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Visual Identity';
-      else if (/\b(tone|voice|jargon|formal|professional|friendly)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Tone & Style';
-      else if (/\b(prohibited|forbidden|do not claim|must not|disallowed|risk-free|guaranteed)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Prohibited Content';
-      else if (/\b(price|pricing|product name|sku|promotion|claim|performance|fact|metric)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Messaging & Claims';
+      const classificationText = `${topic} ${statement}`;
+      if (/\b(logo|colour|color|palette|font|typography|clear space|lockup)\b/i.test(classificationText)) categoryRule.category = 'Visual Identity';
+      else if (/\b(tone|voice|jargon|formal|professional|friendly)\b/i.test(classificationText)) categoryRule.category = 'Tone & Style';
+      else if (/\b(prohibited|forbidden|do not claim|must not|disallowed|risk-free|guaranteed)\b/i.test(classificationText)) categoryRule.category = 'Prohibited Content';
+      else if (/\b(price|pricing|product name|sku|promotion|claim|performance|fact|metric)\b/i.test(classificationText)) categoryRule.category = 'Messaging & Claims';
       rules.push(categoryRule);
     }
   }
