@@ -2244,7 +2244,23 @@ INSTRUCTIONS:
       response = await callVisionWithTimeout('gemini-3.1-flash-lite');
     }
 
-    const rawJson = JSON.parse(response.text || '{}');
+    let rawJson: any;
+    try {
+      rawJson = JSON.parse(response?.text || '{}');
+    } catch (parseErr: any) {
+      console.warn('[SkyNex AI] Vision AI returned malformed JSON; continuing with OCR:', parseErr?.message || parseErr);
+      return {
+        extractedText: '',
+        extractionConfidence: 'partial',
+        toneSummary: 'Vision AI returned an incomplete response. Local OCR and deterministic brand-rule checks were retained.',
+        visualSummary: {
+          layoutNotes: 'Vision AI response was incomplete; visual checks require manual confirmation.'
+        },
+        visualFindings: [],
+        success: false,
+        errorMsg: 'Vision AI returned incomplete JSON; OCR fallback completed.'
+      };
+    }
     const extractedText = typeof rawJson.extractedText === 'string' ? rawJson.extractedText.trim() : '';
     const detectedProductHint =
       typeof rawJson.detectedProductHint === 'string' ? rawJson.detectedProductHint.trim() : '';
@@ -5710,7 +5726,7 @@ app.post('/api/audit-image', async (req: Request, res: Response) => {
 
     // 6. Dual Extraction & Verification Pipeline:
     // Path A: Local OCR Extraction (Tesseract worker)
-    const ocrResult = await extractTextWithMultiPassOcr(processedBuffer);
+    const ocrResult = await extractTextWithTesseract(processedBuffer);
 
     // Path B: Multimodal Vision AI Review (Gemini with timeout and model fallback)
     const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
