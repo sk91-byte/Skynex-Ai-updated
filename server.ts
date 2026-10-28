@@ -1325,6 +1325,38 @@ export function runDeterministicAudit(
       continue;
     }
 
+    // Required disclaimer rules must also fail when the required wording is absent.
+    const requiredDisclaimer = rule.ruleStatement.match(/must include:\s*[“"]([^”"]+)[”"]/i);
+    if (requiredDisclaimer && !draftText.toLowerCase().includes(requiredDisclaimer[1].toLowerCase())) {
+      rawFindings.push({
+        id: `det-missing-${rule.id}-${rawFindings.length + 1}`,
+        classification: 'approved_fact_conflict',
+        findingStatus: 'confirmed',
+        validationState: 'verified_deterministic',
+        category: rule.category,
+        severity: rule.severity,
+        originalSpan: '',
+        startIndex: 0,
+        endIndex: 0,
+        conflictText: `Required disclaimer is missing: “${requiredDisclaimer[1]}”`,
+        ruleId: rule.id,
+        ruleVersion: rule.version || 1,
+        ruleTitle: rule.title,
+        approvedRuleCitation: rule.sourceRef,
+        sourceReference: rule.sourceRef,
+        evidenceSource: rule.sourceRef,
+        evidenceVersion: rule.version || 1,
+        expectedValue: requiredDisclaimer[1],
+        observedValue: '',
+        explanation: rule.explanation,
+        suggestedReplacement: requiredDisclaimer[1],
+        requiresHumanReview: false,
+        engine: 'deterministic',
+        decision: 'pending',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // 1. Check explicit targetPatterns defined on the rule (longest patterns first to prevent partial overlap)
     const sortedPatterns = [...rule.targetPatterns]
       .map(p => p.trim())
@@ -4138,6 +4170,28 @@ function extractRulesHeuristically(
   return rules;
 }
 
+function derivePdfRuleTargetPatterns(topic: string, statement: string): string[] {
+  const patterns: string[] = [];
+  const add = (value: string) => {
+    const clean = value.replace(/[“”]/g, '').trim();
+    if (clean.length >= 4 && !patterns.some(existing => existing.toLowerCase() === clean.toLowerCase())) patterns.push(clean);
+  };
+  const quoted = [...statement.matchAll(/[“"]([^”"]+)[”"]/g)].map(match => match[1]);
+  const normalizedTopic = topic.toLowerCase();
+
+  if (normalizedTopic === 'terminology') {
+    const shortened = statement.match(/(?:shorten it to|call it)\s+[“"]([^”"]+)[”"]/i);
+    if (shortened) add(shortened[1]);
+  } else if (normalizedTopic === 'claims') {
+    quoted.forEach(add);
+  } else if (normalizedTopic === 'product facts') {
+    const approvedPhrase = statement.match(/(?:phrase|claim)\s+[“"]([^”"]+)[”"]/i);
+    if (approvedPhrase) add(approvedPhrase[1]);
+  }
+
+  return patterns;
+}
+
 function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string }[], filename: string): ExtractedPdfRule[] {
   const rules: ExtractedPdfRule[] = [];
   const idPattern = /\b[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}\b/g;
@@ -4180,7 +4234,7 @@ function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string
         title: `${topic}: ${statement.slice(0, 72)}${statement.length > 72 ? '...' : ''}`,
         category: 'Legal & Compliance',
         ruleStatement: statement,
-        targetPatterns: [],
+        targetPatterns: derivePdfRuleTargetPatterns(topic, statement),
         approvedValue: statement,
         severity: severityText === 'critical' ? 'critical' : severityText === 'warning' ? 'warning' : 'info',
         severityLevel: severityText === 'critical' ? 'Critical' : severityText === 'warning' ? 'Medium' : 'Low',
