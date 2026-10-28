@@ -4632,16 +4632,27 @@ app.post('/api/brands/:brandId/rules/batch', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Rules array cannot be empty.' });
   }
 
+  const importableRules = rules.filter((rule: any) => rule?.title?.trim() && rule?.approvedValue?.trim());
+  if (importableRules.length === 0) {
+    return res.status(400).json({ error: 'No valid rules were found in the import. Existing brand rules were preserved.' });
+  }
+
+  // A successful Brand Knowledge import replaces the old rule catalog for this
+  // brand. Products and other brand data remain untouched. Keep an undo snapshot
+  // so an admin can recover the previous demo/rule set if needed.
+  const replacedRuleCount = brand.rules.length;
+  pushBrandRuleUndoSnapshot(brandId, brand.rules, `Replaced ${replacedRuleCount} rules with imported Brand Knowledge`);
+  const replacementRules: BrandRule[] = [];
   const prefix = brandId === 'novapay' ? 'NP' : brandId === 'aerosip' ? 'AS' : brandId.slice(0, 2).toUpperCase() || 'SN';
-  let counter = brand.rules.length + 1;
+  let counter = 1;
   const savedRules: BrandRule[] = [];
   let skippedDuplicates = 0;
 
-  for (const r of rules) {
+  for (const r of importableRules) {
     if (!r.title?.trim() || !r.approvedValue?.trim()) continue;
 
     // Prevent overwriting or duplicating existing rules
-    const alreadyExists = brand.rules.some(
+    const alreadyExists = replacementRules.some(
       existing =>
         existing.title.toLowerCase().trim() === r.title.toLowerCase().trim() &&
         existing.approvedValue.toLowerCase().trim() === r.approvedValue.toLowerCase().trim()
@@ -4652,7 +4663,7 @@ app.post('/api/brands/:brandId/rules/batch', (req: Request, res: Response) => {
     }
 
     let ruleId = `${prefix}-RULE-${String(counter).padStart(2, '0')}`;
-    while (brand.rules.some(existing => existing.id === ruleId)) {
+    while (replacementRules.some(existing => existing.id === ruleId)) {
       counter++;
       ruleId = `${prefix}-RULE-${String(counter).padStart(2, '0')}`;
     }
@@ -4744,14 +4755,17 @@ const resolvedStatus: RuleApprovalStatus = 'Approved';
       ]
     };
 
-    brand.rules.unshift(newRule);
+    replacementRules.unshift(newRule);
     savedRules.push(newRule);
   }
 
+  // Only replace the persisted catalog after at least one rule was built.
+  brand.rules = replacementRules;
   savePersistentState(store);
 
   res.json({
     success: true,
+    replacedRuleCount,
     count: savedRules.length,
     addedCount: savedRules.length,
     skippedDuplicates,
