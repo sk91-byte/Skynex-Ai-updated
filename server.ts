@@ -6074,7 +6074,12 @@ app.post('/api/history/:reportId/decision', (req: Request, res: Response) => {
   // so that originalText is NEVER lost and toggling decisions is 100% deterministic and reversible!
   let workingText = report.originalText;
   const appliedFindings = report.findings
-    .filter(f => (f.decision === 'accepted' || f.decision === 'edited') && f.originalSpan && f.targetType !== 'visual_element')
+    .filter(
+      f =>
+        (f.decision === 'accepted' || f.decision === 'edited') &&
+        f.targetType !== 'visual_element' &&
+        (Boolean(f.originalSpan) || Boolean(f.suggestedReplacement || f.editedReplacement))
+    )
     .sort((a, b) => b.startIndex - a.startIndex);
 
   for (const af of appliedFindings) {
@@ -6083,7 +6088,13 @@ app.post('/api/history/:reportId/decision', (req: Request, res: Response) => {
         ? af.editedReplacement
         : af.suggestedReplacement || af.originalSpan;
 
-    if (
+    if (!af.originalSpan.trim()) {
+      // Missing-required-text findings have no source span. Put the accepted
+      // correction below the draft instead of inserting it at character 0.
+      if (!workingText.toLowerCase().includes(replacement.toLowerCase())) {
+        workingText = `${workingText.trimEnd()}\n\n${replacement}`;
+      }
+    } else if (
       af.startIndex >= 0 &&
       af.endIndex <= workingText.length &&
       workingText.slice(af.startIndex, af.endIndex).toLowerCase() === af.originalSpan.toLowerCase()
