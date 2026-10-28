@@ -4149,10 +4149,18 @@ app.post('/api/extract-rules-from-pdf', async (req: Request, res: Response) => {
       'import and extract brand rules from PDF guidelines',
       { brandId }
     );
-    if (!principal) return;
+  if (!principal) return;
 
-    const base64Content = req.body.base64Content || req.body.base64Pdf;
+// CHANGE 1: Only Workspace Admin can upload Brand Knowledge
+if (principal.canonicalRole !== 'workspace_admin') {
+  return res.status(403).json({
+    code: 'ADMIN_ROLE_REQUIRED',
+    error:
+      'Brand Knowledge updates are restricted to Workspace Admin. Please switch role to Workspace Admin to upload or update brand knowledge.'
+  });
+}
 
+const base64Content = req.body.base64Content || req.body.base64Pdf;
     if (!filename || !base64Content) {
       return res.status(400).json({ error: 'Filename and PDF base64 content are required.' });
     }
@@ -4377,6 +4385,11 @@ ${pagesData.length > 0
     if (extractedRules.length === 0 && extractedText) {
       extractedRules = extractRulesHeuristically(extractedText, pagesData, filename);
     }
+    extractedRules = extractedRules.map(rule => ({
+  ...rule,
+  status: 'Approved' as RuleApprovalStatus,
+  needsManualReview: false
+}));
 
     // Step 5: Duplicate Detection against existing rules in active brand
     for (const rule of extractedRules) {
@@ -4438,6 +4451,13 @@ app.post('/api/brands/:brandId/rules/batch', (req: Request, res: Response) => {
     { brandId }
   );
   if (!principal) return;
+  if (principal.canonicalRole !== 'workspace_admin') {
+  return res.status(403).json({
+    code: 'ADMIN_ROLE_REQUIRED',
+    error:
+      'Brand Knowledge updates are restricted to Workspace Admin. Please switch role to Workspace Admin to upload or update brand knowledge.'
+  });
+}
 
   const {
     rules,
@@ -4499,20 +4519,8 @@ app.post('/api/brands/:brandId/rules/batch', (req: Request, res: Response) => {
       r.severityLevel
     );
 
-    const hasExplicitSource = Boolean(
-      (r.sourceRef && !/unverified\s+source|pending\s+document\s+citation/i.test(String(r.sourceRef))) ||
-      r.sourceDocumentName ||
-      sourceFilename
-    );
-
-    const resolvedStatus: RuleApprovalStatus =
-      r.status === 'Approved'
-        ? hasExplicitSource
-          ? 'Approved'
-          : 'Unverified'
-        : r.status === 'Unverified'
-        ? 'Unverified'
-        : 'Draft';
+// CHANGE 4: Admin-imported Brand Knowledge is immediately approved
+const resolvedStatus: RuleApprovalStatus = 'Approved';
 
     const composedRef = composeSourceReference(
       r.sourceRef,
