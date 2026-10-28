@@ -4216,7 +4216,16 @@ function normalizePdfEvidenceText(value: unknown): string {
 
 function inferPdfRuleCategory(rule: ExtractedPdfRule): RuleCategory {
   const text = normalizePdfEvidenceText(`${rule.title} ${rule.ruleStatement} ${rule.approvedValue} ${rule.evidenceExcerpt}`);
-  if (/\b(approved knowledge|client separation|conflicting source|human verification|evidence|source reference|extraction uncertainty|manual review|applicable policy|cross-client|section\/page)\b/.test(text)) return 'Legal & Compliance';
+  const topic = normalizePdfEvidenceText(rule.title.split(':')[0]);
+
+  if (topic === 'tone & voice') return 'Tone & Style';
+  if (topic === 'terminology' || topic === 'product facts') return 'Messaging & Claims';
+  if (topic === 'claims') return /\b(do not|must not|prohibited|forbidden|disallowed|risk-free|guaranteed)\b/.test(text)
+    ? 'Prohibited Content'
+    : 'Messaging & Claims';
+  if (topic === 'disclaimer' || topic === 'security' || topic === 'evidence' || topic === 'approved knowledge' || topic === 'client separation' || topic === 'conflicting sources' || topic === 'extraction uncertainty') {
+    return 'Legal & Compliance';
+  }
   if (/\b(logo|colour|color|palette|font|typography|clear space|lockup|visual identity)\b/.test(text)) return 'Visual Identity';
   if (/\b(tone|voice|jargon|formal|professional|friendly)\b/.test(text)) return 'Tone & Style';
   if (/\b(prohibited|forbidden|do not claim|must not|disallowed|risk-free|guaranteed)\b/.test(text)) return 'Prohibited Content';
