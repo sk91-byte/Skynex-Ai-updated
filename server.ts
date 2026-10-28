@@ -958,8 +958,8 @@ export function matchCatalogProductsForAudit(
 
     // 3. Check distinctive core product noun/phrase after stripping the brand name prefix
     const coreName = fullProdNameLower
-      .replace(new RegExp(`^${escapeRegExp(brandLower)}\\s+`, 'i'), '')
-      .replace(new RegExp(`^${escapeRegExp(spacedBrandVariant)}\\s+`, 'i'), '')
+      .replace(new RegExp(`^${escapeRegExp(brandLower)}\s+`, 'i'), '')
+      .replace(new RegExp(`^${escapeRegExp(spacedBrandVariant)}\s+`, 'i'), '')
       .trim();
 
     if (coreName.length >= 3 && !genericStopwords.has(coreName)) {
@@ -1326,7 +1326,7 @@ export function runDeterministicAudit(
     }
 
     // Required disclaimer rules must also fail when the required wording is absent.
-    const requiredDisclaimer = rule.ruleStatement.match(/must include:\s*[“"]([^”"]+)[”"]/i);
+    const requiredDisclaimer = rule.ruleStatement.match(/must include:\s*[“"]?([^”"]+?)[”"]?(?:\.|$)/i);
     if (requiredDisclaimer && !draftText.toLowerCase().includes(requiredDisclaimer[1].toLowerCase())) {
       rawFindings.push({
         id: `det-missing-${rule.id}-${rawFindings.length + 1}`,
@@ -4189,6 +4189,14 @@ function derivePdfRuleTargetPatterns(topic: string, statement: string): string[]
     if (approvedPhrase) add(approvedPhrase[1]);
   }
 
+  const genericMatches = statement.match(/(?:do not|never|must not|prohibited|forbidden)\s+(?:claim|use|say|promise)\s+(.+?)(?:\.|$)/i);
+  if (genericMatches?.[1]) add(genericMatches[1]);
+  const riskyMatches = statement.match(/(?:guaranteed?\s+[a-z][a-z -]{3,50}|risk[- ]free\s+[a-z][a-z -]{3,50}|\d{2,3}%\s+(?:off|returns?)|no\s+risk)/gi) || [];
+  riskyMatches.forEach(add);
+  if (patterns.length === 0) {
+    const words = statement.replace(/[^a-zA-Z0-9#%₹$ -]/g, ' ').split(/\s+/).filter(Boolean);
+    if (words.length >= 5) add(words.slice(0, Math.min(10, words.length)).join(' '));
+  }
   return patterns;
 }
 
@@ -4762,7 +4770,10 @@ const resolvedStatus: RuleApprovalStatus = 'Approved';
       ? r.targetPatterns.map((p: string) => String(p).trim()).filter(Boolean)
       : typeof r.targetPatterns === 'string'
       ? (r.targetPatterns as string).split(',').map(p => p.trim()).filter(Boolean)
-      : [];
+      : [];    // Derive triggers when an AI/prose import omitted targetPatterns.
+    const effectivePatterns = parsedPatterns.length > 0
+      ? parsedPatterns
+      : derivePdfRuleTargetPatterns(r.title || r.category || 'rule', `${r.ruleStatement || ''} ${r.approvedValue || ''}`);
 
     const nowIso = new Date().toISOString();
     const nowDate = nowIso.split('T')[0];
@@ -4773,7 +4784,7 @@ const resolvedStatus: RuleApprovalStatus = 'Approved';
       category: category as RuleCategory,
       title: r.title.trim(),
       ruleStatement: r.ruleStatement?.trim() || `Enforce "${r.approvedValue.trim()}".`,
-      targetPatterns: parsedPatterns,
+      targetPatterns: effectivePatterns,
       approvedValue: r.approvedValue.trim(),
       sourceRef: composedRef,
       sourceDocumentName: r.sourceDocumentName || sourceFilename || undefined,
@@ -4798,7 +4809,7 @@ const resolvedStatus: RuleApprovalStatus = 'Approved';
           category: category as RuleCategory,
           ruleStatement: r.ruleStatement?.trim() || `Enforce "${r.approvedValue.trim()}".`,
           approvedValue: r.approvedValue.trim(),
-          targetPatterns: parsedPatterns,
+          targetPatterns: effectivePatterns,
           sourceRef: composedRef,
           sourceDocumentName: r.sourceDocumentName || sourceFilename || undefined,
           sourcePage: r.sourcePage ? String(r.sourcePage) : undefined,
