@@ -514,7 +514,7 @@
   },
   "auditHistory": [
     {
-      "id": "REV-2026-204",
+      "id": "REV-2026-633",
       "draftGroupId": "novapay::confidential executive draft::novapay provides enterprise payment infrastructure at ₹999/month.",
       "brandId": "novapay",
       "brandName": "NovaPay",
@@ -530,7 +530,7 @@
           "changeSummary": "Original submitted draft (preserved)",
           "createdBy": "Aditi Sharma",
           "createdByRole": "Workspace Admin",
-          "createdAt": "2026-10-28T13:37:17.415Z"
+          "createdAt": "2026-10-28T14:44:36.753Z"
         }
       ],
       "findings": [],
@@ -542,7 +542,7 @@
         "geminiSuccess": false
       },
       "governingContext": {
-        "snapshotAt": "2026-10-28T13:37:17.415Z",
+        "snapshotAt": "2026-10-28T14:44:36.753Z",
         "activeRuleVersions": [
           {
             "ruleId": "VIS-001",
@@ -610,7 +610,7 @@
       "submittedByRoleKey": "brand_manager",
       "workspaceId": "ws-enterprise-01",
       "visibilityScope": "private_draft",
-      "createdAt": "2026-10-28T13:37:17.415Z",
+      "createdAt": "2026-10-28T14:44:36.753Z",
       "checkOutcomes": {
         "documentExtraction": "passed",
         "ocrExtraction": "skipped",
@@ -626,7 +626,7 @@
       }
     },
     {
-      "id": "REV-2026-826",
+      "id": "REV-2026-148",
       "draftGroupId": "novapay::creator promotional draft::nova pay guarantees risk-free profits. subscribe today for just ₹499/month!",
       "brandId": "novapay",
       "brandName": "NovaPay",
@@ -642,7 +642,7 @@
           "changeSummary": "Original submitted draft (preserved)",
           "createdBy": "Ananya Iyer",
           "createdByRole": "Content Creator",
-          "createdAt": "2026-10-28T13:37:17.353Z"
+          "createdAt": "2026-10-28T14:44:36.688Z"
         },
         {
           "versionNumber": 2,
@@ -650,7 +650,7 @@
           "changeSummary": "Accepted suggestion for \"Nova Pay\" → \"NovaPay\"",
           "createdBy": "Ananya Iyer",
           "createdByRole": "Content Creator",
-          "createdAt": "2026-10-28T13:37:17.357Z"
+          "createdAt": "2026-10-28T14:44:36.693Z"
         },
         {
           "versionNumber": 3,
@@ -658,7 +658,7 @@
           "changeSummary": "Accepted suggestion for \"guarantees risk-free profits\" → \"Regulated transaction infrastructure\"",
           "createdBy": "Rohan Verma",
           "createdByRole": "Reviewer & Manager",
-          "createdAt": "2026-10-28T13:37:17.379Z"
+          "createdAt": "2026-10-28T14:44:36.736Z"
         },
         {
           "versionNumber": 4,
@@ -666,7 +666,7 @@
           "changeSummary": "Accepted suggestion for \"₹499/month\" → \"₹999/month\"",
           "createdBy": "Rohan Verma",
           "createdByRole": "Reviewer & Manager",
-          "createdAt": "2026-10-28T13:37:17.383Z"
+          "createdAt": "2026-10-28T14:44:36.741Z"
         }
       ],
       "findings": [
@@ -695,19 +695,19 @@
           "requiresHumanReview": false,
           "engine": "deterministic",
           "decision": "accepted",
-          "timestamp": "2026-10-28T13:37:17.353Z",
+          "timestamp": "2026-10-28T14:44:36.688Z",
           "decidedBy": "Ananya Iyer",
           "decidedByRole": "Content Creator",
           "decisionBy": "Ananya Iyer",
           "decisionRole": "Content Creator",
-          "decidedAt": "2026-10-28T13:37:17.357Z",
+          "decidedAt": "2026-10-28T14:44:36.693Z",
           "decisionHistory": [
             {
               "decision": "accepted",
               "findingStatus": "resolved",
               "decidedBy": "Ananya Iyer",
               "decidedByRole": "Content Creator",
-              "decidedAt": "2026-10-28T13:37:17.357Z"
+              "decidedAt": "2026-10-28T14:44:36.693Z"
             }
           ]
         },
@@ -736,19 +736,19 @@
           "requiresHumanReview": false,
           "engine": "deterministic",
           "decision": "accepted",
-          "timestamp": "2026-10-28T13:37:17.353Z",
+          "timestamp": "2026-10-28T14:44:36.688Z",
           "decidedBy": "Rohan Verma",
           "decidedByRole": "Reviewer & Manager",
           "decisionBy": "Rohan Verma",
           "decisionRole": "Reviewer & Manager",
-          "decidedAt": "2026-10-28T13:37:17.379Z",
+          "decidedAt": "2026-10-28T14:44:36.736Z",
           "decisionHistory": [
             {
               "decision": "accepted",
               "findingStatus": "resolved",
               "decidedBy": "Rohan Verma",
               "decidedByRole": "Reviewer & Manager",
-              "decidedAt": "2026-10-28T13:37:17.379Z"
+              "decidedAt": "2026-10-28T14:44:36.736Z"
             }
           ]
         },
@@ -777,19 +777,19 @@
           "requiresHumanReview": false,
           "engine": "deterministic",
           "decision": "accepted",
-          "timestamp": "2026-10-28T13:37:17.353Z",
+          "timestamp": "2026-10-28T14:44:36.688Z",
           "decidedBy": "Rohan Verma",
           "decidedByRole": "Reviewer & Manager",
           "decisionBy": "Rohan Verma",
           "decisionRole": "Reviewer & Manager",
-          "decidedAt": "2026-10-28T13:37:17.383Z",
+          "decidedAt": "2026-10-28T14:44:36.741Z",
           "decisionHistory": [
             {
               "decision": "accepted",
               "findingStatus": "resolved",
               "decidedBy": "Rohan Verma",
               "decidedByRole": "Reviewer & Manager",
-              "decidedAt": "2026-10-28T13:37:17.383Z"
+              "decidedAt": "2026-10-28T14:44:36.741Z"
             }
           ]
         }
@@ -802,7 +802,7 @@
         "geminiSuccess": false
       },
       "governingContext": {
-        "snapshotAt": "2026-10-28T13:37:17.353Z",
+        "snapshotAt": "2026-10-28T14:44:36.688Z",
         "activeRuleVersions": [
           {
             "ruleId": "VIS-001",
@@ -870,7 +870,7 @@
       "submittedByRoleKey": "creator",
       "workspaceId": "ws-enterprise-01",
       "visibilityScope": "workspace",
-      "createdAt": "2026-10-28T13:37:17.353Z",
+      "createdAt": "2026-10-28T14:44:36.688Z",
       "checkOutcomes": {
         "documentExtraction": "passed",
         "ocrExtraction": "skipped",
@@ -886,9 +886,9 @@
       },
       "contentApprovedBy": "Rohan Verma",
       "contentApprovedByRole": "Reviewer & Manager",
-      "contentApprovedAt": "2026-10-28T13:37:17.387Z",
+      "contentApprovedAt": "2026-10-28T14:44:36.747Z",
       "contentApprovalNotes": "All mandatory brand rules verified and remediated.",
-      "completedAt": "2026-10-28T13:37:17.387Z"
+      "completedAt": "2026-10-28T14:44:36.747Z"
     }
   ],
   "investigations": {
@@ -898,7 +898,7 @@
       "rootCauseNotes": "Agency writers confused spacing in NovaPay wordmark.",
       "correctiveActionTaken": "Added compound wordmark callout to creative brief.",
       "investigatedBy": "Rohan Verma (Reviewer & Manager)",
-      "actionDate": "2026-10-28T13:37:17.442Z"
+      "actionDate": "2026-10-28T14:44:36.776Z"
     }
   },
   "recurrenceConfig": {
@@ -909,8 +909,8 @@
   "activeDemoUserId": "usr-admin-01",
   "securityAuditEvents": [
     {
-      "eventId": "sec-1793194638693-eyog9",
-      "timestamp": "2026-10-28T13:37:18.693Z",
+      "eventId": "sec-1793198678061-me86g",
+      "timestamp": "2026-10-28T14:44:38.061Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-admin-01",
@@ -923,8 +923,8 @@
       "reason": "Authenticated switch from \"Content Creator\" to \"Workspace Admin\" for account \"undefined\" (usr-admin-01)."
     },
     {
-      "eventId": "sec-1793194638600-gs0sw",
-      "timestamp": "2026-10-28T13:37:18.600Z",
+      "eventId": "sec-1793198677958-9gg2f",
+      "timestamp": "2026-10-28T14:44:37.958Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-creator-03",
@@ -937,8 +937,8 @@
       "reason": "Authenticated switch from \"Reviewer & Manager\" to \"Content Creator\" for account \"undefined\" (usr-creator-03)."
     },
     {
-      "eventId": "sec-1793194638506-bmyua",
-      "timestamp": "2026-10-28T13:37:18.506Z",
+      "eventId": "sec-1793198677855-1uduj",
+      "timestamp": "2026-10-28T14:44:37.855Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-reviewer-02",
@@ -951,8 +951,8 @@
       "reason": "Authenticated switch from \"Workspace Admin\" to \"Reviewer & Manager\" for account \"undefined\" (usr-reviewer-02)."
     },
     {
-      "eventId": "sec-1793194638411-rp5u6",
-      "timestamp": "2026-10-28T13:37:18.411Z",
+      "eventId": "sec-1793198677750-ql6fk",
+      "timestamp": "2026-10-28T14:44:37.750Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-admin-01",
@@ -965,8 +965,8 @@
       "reason": "Authenticated switch from \"Workspace Admin\" to \"Workspace Admin\" for account \"undefined\" (usr-admin-01)."
     },
     {
-      "eventId": "sec-1793194638311-zozam",
-      "timestamp": "2026-10-28T13:37:18.311Z",
+      "eventId": "sec-1793198677642-5kb3l",
+      "timestamp": "2026-10-28T14:44:37.642Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-admin-01",
@@ -979,8 +979,8 @@
       "reason": "Authenticated switch from \"Workspace Admin\" to \"Workspace Admin\" for account \"undefined\" (usr-admin-01)."
     },
     {
-      "eventId": "sec-1793194638215-re4p9",
-      "timestamp": "2026-10-28T13:37:18.215Z",
+      "eventId": "sec-1793198677540-n1zx5",
+      "timestamp": "2026-10-28T14:44:37.540Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "unauthenticated",
@@ -993,8 +993,8 @@
       "reason": "Failed authenticated role switch to \"workspace_admin\": Unable to verify your credentials or requested access."
     },
     {
-      "eventId": "sec-1793194638117-nl63a",
-      "timestamp": "2026-10-28T13:37:18.117Z",
+      "eventId": "sec-1793198677441-jwsrr",
+      "timestamp": "2026-10-28T14:44:37.441Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "unauthenticated",
@@ -1007,8 +1007,8 @@
       "reason": "Failed authenticated role switch to \"workspace_admin\": Unable to verify your credentials or requested access."
     },
     {
-      "eventId": "sec-1793194637945-fi49d",
-      "timestamp": "2026-10-28T13:37:17.945Z",
+      "eventId": "sec-1793198677317-k8eby",
+      "timestamp": "2026-10-28T14:44:37.317Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "unauthenticated",
@@ -1021,8 +1021,8 @@
       "reason": "Failed authenticated role switch to \"workspace_admin\": Unable to verify your credentials or requested access."
     },
     {
-      "eventId": "sec-1793194637458-yoryl",
-      "timestamp": "2026-10-28T13:37:17.458Z",
+      "eventId": "sec-1793198676790-1in7m",
+      "timestamp": "2026-10-28T14:44:36.790Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1036,8 +1036,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canViewSecurityAuditLog\" required to view workspace security and RBAC audit logs."
     },
     {
-      "eventId": "sec-1793194637455-4zrtr",
-      "timestamp": "2026-10-28T13:37:17.455Z",
+      "eventId": "sec-1793198676787-rluc0",
+      "timestamp": "2026-10-28T14:44:36.787Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1051,8 +1051,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canViewSecurityAuditLog\" required to view workspace security and RBAC audit logs."
     },
     {
-      "eventId": "sec-1793194637447-w4iv9",
-      "timestamp": "2026-10-28T13:37:17.447Z",
+      "eventId": "sec-1793198676781-g2mav",
+      "timestamp": "2026-10-28T14:44:36.781Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1066,8 +1066,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canConfigureRecurrence\" required to update workspace recurrence alert thresholds."
     },
     {
-      "eventId": "sec-1793194637439-5zzjr",
-      "timestamp": "2026-10-28T13:37:17.439Z",
+      "eventId": "sec-1793198676772-ts2k6",
+      "timestamp": "2026-10-28T14:44:36.772Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1081,8 +1081,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canInvestigateRecurrence\" required to record Brand Clarity Loop root-cause investigations and corrective actions."
     },
     {
-      "eventId": "sec-1793194637425-gwo86",
-      "timestamp": "2026-10-28T13:37:17.425Z",
+      "eventId": "sec-1793198676763-rhxdk",
+      "timestamp": "2026-10-28T14:44:36.763Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1096,8 +1096,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canViewInsights\" required to access Manager Insights and recurring compliance patterns."
     },
     {
-      "eventId": "sec-1793194637371-8l2ut",
-      "timestamp": "2026-10-28T13:37:17.371Z",
+      "eventId": "sec-1793198676727-kshna",
+      "timestamp": "2026-10-28T14:44:36.727Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1106,15 +1106,15 @@
       "canonicalRole": "content_creator",
       "workspaceId": "ws-enterprise-01",
       "brandId": "novapay",
-      "resourceId": "REV-2026-826",
+      "resourceId": "REV-2026-148",
       "permissionChecked": "canFinalizeReview",
       "allowed": false,
       "statusCode": 403,
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canFinalizeReview\" required to finalize and approve content for publication."
     },
     {
-      "eventId": "sec-1793194637365-s5t13",
-      "timestamp": "2026-10-28T13:37:17.365Z",
+      "eventId": "sec-1793198676722-oh6zc",
+      "timestamp": "2026-10-28T14:44:36.722Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1123,15 +1123,15 @@
       "canonicalRole": "content_creator",
       "workspaceId": "ws-enterprise-01",
       "brandId": "novapay",
-      "resourceId": "REV-2026-826",
+      "resourceId": "REV-2026-148",
       "permissionChecked": "canApproveWaiver",
       "allowed": false,
       "statusCode": 403,
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canApproveWaiver\" required to grant a compliance exception waiver."
     },
     {
-      "eventId": "sec-1793194637362-uewdk",
-      "timestamp": "2026-10-28T13:37:17.362Z",
+      "eventId": "sec-1793198676716-s2abr",
+      "timestamp": "2026-10-28T14:44:36.716Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1140,15 +1140,15 @@
       "canonicalRole": "content_creator",
       "workspaceId": "ws-enterprise-01",
       "brandId": "novapay",
-      "resourceId": "REV-2026-826",
+      "resourceId": "REV-2026-148",
       "permissionChecked": "canDismissConfirmedViolation",
       "allowed": false,
       "statusCode": 403,
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canDismissConfirmedViolation\" required to dismiss a confirmed compliance violation as not_a_violation."
     },
     {
-      "eventId": "sec-1793194637340-qyms3",
-      "timestamp": "2026-10-28T13:37:17.340Z",
+      "eventId": "sec-1793198676672-u5zoo",
+      "timestamp": "2026-10-28T14:44:36.672Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1163,8 +1163,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canEditProducts\" required to delete catalog products."
     },
     {
-      "eventId": "sec-1793194637337-f3zkl",
-      "timestamp": "2026-10-28T13:37:17.337Z",
+      "eventId": "sec-1793198676668-l9jeh",
+      "timestamp": "2026-10-28T14:44:36.668Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1179,8 +1179,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canEditProducts\" required to modify catalog products, SKUs, and pricing."
     },
     {
-      "eventId": "sec-1793194637333-nnl76",
-      "timestamp": "2026-10-28T13:37:17.333Z",
+      "eventId": "sec-1793198676663-399pp",
+      "timestamp": "2026-10-28T14:44:36.663Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1195,8 +1195,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canEditProducts\" required to modify catalog products, SKUs, and pricing."
     },
     {
-      "eventId": "sec-1793194637329-ujn6i",
-      "timestamp": "2026-10-28T13:37:17.329Z",
+      "eventId": "sec-1793198676658-xnbqp",
+      "timestamp": "2026-10-28T14:44:36.658Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1211,8 +1211,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canEditProducts\" required to create or manage catalog products, SKUs, and pricing."
     },
     {
-      "eventId": "sec-1793194637295-m2nco",
-      "timestamp": "2026-10-28T13:37:17.295Z",
+      "eventId": "sec-1793198676635-kcbvy",
+      "timestamp": "2026-10-28T14:44:36.635Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1227,8 +1227,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canDeleteRules\" required to delete brand governance rules."
     },
     {
-      "eventId": "sec-1793194637293-wcz6a",
-      "timestamp": "2026-10-28T13:37:17.293Z",
+      "eventId": "sec-1793198676631-5cwwt",
+      "timestamp": "2026-10-28T14:44:36.631Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1243,8 +1243,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canImportGuidelines\" required to import and extract brand rules from PDF guidelines."
     },
     {
-      "eventId": "sec-1793194637289-w1hnr",
-      "timestamp": "2026-10-28T13:37:17.289Z",
+      "eventId": "sec-1793198676625-t3yng",
+      "timestamp": "2026-10-28T14:44:36.625Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1259,8 +1259,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canImportGuidelines\" required to batch save extracted brand governance rules."
     },
     {
-      "eventId": "sec-1793194637286-0lztp",
-      "timestamp": "2026-10-28T13:37:17.286Z",
+      "eventId": "sec-1793198676619-rjkxc",
+      "timestamp": "2026-10-28T14:44:36.619Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1275,8 +1275,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canEditRules\" required to update brand governance rules."
     },
     {
-      "eventId": "sec-1793194637282-nt5g2",
-      "timestamp": "2026-10-28T13:37:17.282Z",
+      "eventId": "sec-1793198676615-07wj2",
+      "timestamp": "2026-10-28T14:44:36.615Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1291,8 +1291,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canEditRules\" required to update brand governance rules."
     },
     {
-      "eventId": "sec-1793194637273-3aw11",
-      "timestamp": "2026-10-28T13:37:17.273Z",
+      "eventId": "sec-1793198676604-e0iri",
+      "timestamp": "2026-10-28T14:44:36.604Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-reviewer-02",
@@ -1307,8 +1307,8 @@
       "reason": "Unauthorized action: Role \"Reviewer & Manager\" (brand_reviewer) does not have permission \"canCreateRules\" required to create brand governance rules."
     },
     {
-      "eventId": "sec-1793194637267-134tc",
-      "timestamp": "2026-10-28T13:37:17.267Z",
+      "eventId": "sec-1793198676598-r6m2x",
+      "timestamp": "2026-10-28T14:44:36.598Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1323,8 +1323,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canCreateRules\" required to create brand governance rules."
     },
     {
-      "eventId": "sec-1793194637262-5q86j",
-      "timestamp": "2026-10-28T13:37:17.262Z",
+      "eventId": "sec-1793198676593-whfs1",
+      "timestamp": "2026-10-28T14:44:36.593Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-admin-01",
@@ -1337,8 +1337,8 @@
       "reason": "Switched active workspace persona from \"Ananya Iyer\" (Content Creator) to \"Aditi Sharma\" (Workspace Admin)."
     },
     {
-      "eventId": "sec-1793194637256-ll1pe",
-      "timestamp": "2026-10-28T13:37:17.256Z",
+      "eventId": "sec-1793198676589-eqll5",
+      "timestamp": "2026-10-28T14:44:36.589Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "unknown",
@@ -1351,8 +1351,8 @@
       "reason": "Attempted to switch to invalid or non-existent role \"non-existent-user\"."
     },
     {
-      "eventId": "sec-1793194637250-umvae",
-      "timestamp": "2026-10-28T13:37:17.250Z",
+      "eventId": "sec-1793198676584-prxx2",
+      "timestamp": "2026-10-28T14:44:36.584Z",
       "outcome": "allowed",
       "eventType": "ROLE_SWITCH",
       "actorId": "usr-creator-03",
@@ -1365,8 +1365,8 @@
       "reason": "Switched active workspace persona from \"Aditi Sharma\" (Workspace Admin) to \"Ananya Iyer\" (Content Creator)."
     },
     {
-      "eventId": "sec-1793194637243-lrci5",
-      "timestamp": "2026-10-28T13:37:17.243Z",
+      "eventId": "sec-1793198676580-0spxs",
+      "timestamp": "2026-10-28T14:44:36.580Z",
       "outcome": "denied",
       "eventType": "CROSS_SCOPE_DENIED",
       "actorId": "usr-admin-01",
@@ -1381,8 +1381,8 @@
       "reason": "Cross-workspace access denied: Principal \"Aditi Sharma\" is scoped to workspace \"ws-enterprise-01\" and cannot access workspace \"ws-rogue-tenant-999\"."
     },
     {
-      "eventId": "sec-1793194637237-rxccc",
-      "timestamp": "2026-10-28T13:37:17.237Z",
+      "eventId": "sec-1793198676575-vvk7f",
+      "timestamp": "2026-10-28T14:44:36.575Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-creator-03",
@@ -1397,8 +1397,8 @@
       "reason": "Unauthorized action: Role \"Content Creator\" (content_creator) does not have permission \"canCreateRules\" required to create brand governance rules."
     },
     {
-      "eventId": "sec-1793194637233-sybkx",
-      "timestamp": "2026-10-28T13:37:17.233Z",
+      "eventId": "sec-1793198676571-3vuit",
+      "timestamp": "2026-10-28T14:44:36.571Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "usr-admin-01",
@@ -1413,8 +1413,8 @@
       "reason": "Invalid or unrecognized user ID header \"usr-unknown-999\"."
     },
     {
-      "eventId": "sec-1793194637227-1bs1w",
-      "timestamp": "2026-10-28T13:37:17.227Z",
+      "eventId": "sec-1793198676564-0p13r",
+      "timestamp": "2026-10-28T14:44:36.564Z",
       "outcome": "denied",
       "eventType": "AUTHORIZATION_DENIED",
       "actorId": "anonymous",

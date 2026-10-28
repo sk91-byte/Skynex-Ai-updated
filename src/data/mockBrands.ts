@@ -1,7 +1,9 @@
 import {
   BrandProfile,
   AuditReport,
-  RecurrenceThresholdConfig
+  RecurrenceThresholdConfig,
+  BrandDnaProfile,
+  BrandConsistencyCheckResult
 } from '../types.ts';
 
 // Configurable recurrence threshold (3+ occurrences across 2+ drafts in 7-day window)
@@ -497,6 +499,182 @@ export const NOVAPAY_BRAND: BrandProfile = {
       badge: 'Unsupported Claim',
       description: 'Claims 3x faster processing without citing published benchmark audit.',
       expectedIssues: ['Unsupported verification needed']
+    }
+  ],
+  brandDnaProfile: {
+    id: 'dna-novapay-canonical',
+    brandId: 'novapay',
+    brandName: 'NovaPay',
+    sourceType: 'website',
+    sourceUrl: 'https://novapay.example.com',
+    analyzedAt: '2026-10-20T10:00:00.000Z',
+    updatedAt: '2026-10-20T10:00:00.000Z',
+    overallConfidence: 96,
+    extractionMethod: 'live_html_css_plus_gemini',
+    aiUsed: true,
+    limitationNotice: 'Extracted from official enterprise website guidelines and design system tokens.',
+    colors: [
+      {
+        hex: '#2563EB',
+        name: 'Cobalt Blue',
+        role: 'primary',
+        usagePercentage: 42,
+        contrastWithWhite: '4.8:1 (Pass AA)',
+        context: 'Primary action buttons, brand icon badge, navigation accents'
+      },
+      {
+        hex: '#0F172A',
+        name: 'Navy Slate',
+        role: 'secondary',
+        usagePercentage: 35,
+        contrastWithWhite: '16.1:1 (Pass AAA)',
+        context: 'Headings, high-contrast containers, dark hero canvas'
+      },
+      {
+        hex: '#06B6D4',
+        name: 'Cyan Sky',
+        role: 'accent',
+        usagePercentage: 15,
+        contrastWithWhite: '3.1:1 (UI Highlight)',
+        context: 'Feature badges, visual accent borders, verified tags'
+      },
+      {
+        hex: '#F8FAFC',
+        name: 'Soft Canvas',
+        role: 'background',
+        usagePercentage: 8,
+        contrastWithWhite: '1.05:1',
+        context: 'Primary workspace canvas and card surfaces'
+      }
+    ],
+    typography: {
+      headingFont: 'Plus Jakarta Sans, sans-serif',
+      bodyFont: 'Public Sans, sans-serif',
+      monoFont: 'JetBrains Mono, monospace',
+      fontScaleRatios: ['12px', '14px', '16px', '20px', '28px', '36px', '48px'],
+      detectedWeights: [400, 500, 600, 700, 800],
+      sampleHeadline: 'Unified Global Payment Orchestration',
+      sampleBody: 'NovaPay empowers fast-growing enterprises with instant settlement, fraud prevention, and cross-border treasury routing.'
+    },
+    logoUsage: {
+      primaryLogoUrl: '/assets/sample-ads/novapay-ad-compliant.png',
+      approvedLockups: [
+        'Official horizontal wordmark with blue accent icon',
+        'Dark background inverse white horizontal mark'
+      ],
+      prohibitedTreatments: [
+        'Circular red coin badge',
+        'Standalone badge without wordmark',
+        'Altered serif font typography',
+        'Distorted or stretched lockup'
+      ],
+      clearspaceRequirement: 'Minimum 16px or 1x icon height margin on all sides',
+      minimumWidthPx: 120
+    },
+    visualIdentity: {
+      dominantStyle: 'Minimalist enterprise fintech with subtle gradient depth and high-contrast typography',
+      imageryTone: 'Clean product screenshots, vector UI schematics, authentic professional photography',
+      layoutDensity: 'balanced',
+      cornerRadiusPx: 12,
+      elevationStyle: 'Subtle 1px borders (#334155) with soft 2xs drop shadows',
+      prohibitedImagery: [
+        'Cheesy stock handshake photos',
+        'Distorted non-vector logos',
+        'High-saturation neon gradients outside brand palette'
+      ]
+    },
+    brandVoice: {
+      archetype: 'The Authoritative Innovator',
+      formalityLevel: 'Professional & Direct',
+      primaryTone: 'Confident, precise, enterprise-grade, transparent',
+      approvedKeywords: [
+        'instant settlement',
+        'unified orchestration',
+        'zero hidden fees',
+        'enterprise reliability',
+        'bank-grade security'
+      ],
+      prohibitedPhrases: [
+        'risk-free profits',
+        'guaranteed riches',
+        'get rich quick',
+        '100% free forever'
+      ],
+      sampleValueProposition: 'Delivering secure, transparent payment processing infrastructure for global commerce.'
+    },
+    referenceContent: [
+      {
+        type: 'value_prop',
+        content: 'NovaPay empowers enterprise treasuries with unified multi-currency rails.',
+        sourceLabel: 'Homepage Hero'
+      },
+      {
+        type: 'pricing_summary',
+        content: 'Standard enterprise subscription starts at ₹999/month with transparent volume tiering.',
+        sourceLabel: 'Pricing Page'
+      }
+    ],
+    isSaved: true
+  },
+  consistencyChecks: [
+    {
+      id: 'chk-novapay-sample-01',
+      brandId: 'novapay',
+      dnaProfileId: 'dna-novapay-canonical',
+      creativeTitle: 'NovaPay Promotional Ad (Sample Check)',
+      filename: 'novapay-ad-prohibited-claim.png',
+      originalImageUrl: '/assets/sample-ads/novapay-ad-prohibited-claim.png',
+      overallScore: 68,
+      scoringMethodology: 'Weighted deduction across Brand Voice (20%), Color Palette (25%), Logo Usage (20%), Typography (15%), and Layout (10%).',
+      categoryScores: [
+        { category: 'Color Palette', score: 92, weight: 25, status: 'pass', issueCount: 0 },
+        { category: 'Typography', score: 90, weight: 15, status: 'pass', issueCount: 0 },
+        { category: 'Logo Usage', score: 65, weight: 20, status: 'warning', issueCount: 1 },
+        { category: 'Layout & Spacing', score: 85, weight: 10, status: 'pass', issueCount: 0 },
+        { category: 'Imagery & Style', score: 90, weight: 10, status: 'pass', issueCount: 0 },
+        { category: 'Brand Voice & Messaging', score: 40, weight: 20, status: 'fail', issueCount: 2 }
+      ],
+      issues: [
+        {
+          id: 'iss-dna-voice-01',
+          category: 'Brand Voice & Messaging',
+          severity: 'critical',
+          title: 'Prohibited Profit Guarantee',
+          description: 'Creative text promises "risk-free profits", directly conflicting with approved brand voice guidelines.',
+          affectedElement: 'Headline claim',
+          recommendedCorrection: 'Replace with: "delivers secure, transparent payment processing infrastructure."',
+          estimatedScoreImpact: 28,
+          canAutoFix: true
+        },
+        {
+          id: 'iss-dna-price-02',
+          category: 'Brand Voice & Messaging',
+          severity: 'critical',
+          title: 'Commercial Price Conflict',
+          description: 'Creative cites ₹499/month, which conflicts with the approved ₹999/month rate.',
+          affectedElement: 'Subscription price CTA',
+          recommendedCorrection: 'Update subscription price to ₹999/month.',
+          estimatedScoreImpact: 22,
+          canAutoFix: true
+        },
+        {
+          id: 'iss-dna-logo-03',
+          category: 'Logo Usage',
+          severity: 'warning',
+          title: 'Brand Wordmark Clearspace',
+          description: 'Perimeter padding around the brand mark is under 16px.',
+          affectedElement: 'Top logo badge',
+          recommendedCorrection: 'Expand horizontal lockup clearspace margin to at least 16px.',
+          estimatedScoreImpact: 14,
+          canAutoFix: true
+        }
+      ],
+      extractedText: 'Nova Pay guarantees risk-free profits. Subscribe today for just ₹499/month!',
+      detectedDominantColors: ['#0F172A', '#2563EB', '#06B6D4'],
+      imageDimensions: { width: 800, height: 500 },
+      aiUsed: true,
+      analyzedAt: '2026-10-25T14:30:00.000Z',
+      approvalStatus: 'pending'
     }
   ]
 };

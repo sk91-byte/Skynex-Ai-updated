@@ -116,6 +116,17 @@ const app = express();
 
 app.use(express.json({ limit: '15mb' }));
 
+// CORS middleware allowing cross-origin requests from custom domain (e.g. skynexstudio.xyz)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user-id, x-user-role, x-skynex-role, x-workspace-id, x-authorized-brands');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Persistent JSON Store Path so state survives reloads & server restarts
 const DATA_FILE_PATH = path.resolve(__dirname, '.skynex-persistent-store.json');
 

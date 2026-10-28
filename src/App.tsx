@@ -65,6 +65,7 @@ import {
   activeUserHeaderRef,
   apiFetch as fetch
 } from './data/userProfiles.ts';
+import { BRANDS } from './data/mockBrands.ts';
 import {
   BrandId,
   BrandProfile,
@@ -212,7 +213,18 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type?: 'info' | 'error' | 'success' } | null>(null);
 
   // Persistent Server State
-  const [brands, setBrands] = useState<Record<string, BrandProfile>>({});
+  const [brands, setBrands] = useState<Record<string, BrandProfile>>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('skynex_cached_brands_v1') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return JSON.parse(JSON.stringify(BRANDS));
+  });
   const [activeBrandId, setActiveBrandId] = useState<BrandId>(() => {
     const saved = localStorage.getItem(ACTIVE_BRAND_STORAGE_KEY);
     return saved || 'novapay';
@@ -397,7 +409,8 @@ export default function App() {
     }, 4200);
   };
 
-  const activeBrand: BrandProfile | undefined = brands[activeBrandId] || Object.values(brands)[0];
+  const activeBrand: BrandProfile =
+    brands[activeBrandId] || Object.values(brands)[0] || BRANDS.novapay;
 
   // Fetch initial state from backend
   const fetchAppState = async (overrideUser?: UserProfile) => {
@@ -406,8 +419,22 @@ export default function App() {
     }
     try {
       const res = await fetch('/api/state');
-      if (!res.ok) throw new Error('Failed to load application state');
+      if (!res.ok) {
+        console.warn('[SkyNex AI] Backend state load returned HTTP', res.status);
+        setIsInitialLoading(false);
+        return;
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        console.warn('[SkyNex AI] Backend returned HTML; keeping client knowledge base.');
+        setIsInitialLoading(false);
+        return;
+      }
       const data = await res.json();
+      if (!data || typeof data !== 'object') {
+        setIsInitialLoading(false);
+        return;
+      }
 
       if (!overrideUser && data.activeUser && data.activeUser.id) {
         const matchedProfile = USER_PROFILES.find(u => u.id === data.activeUser.id);
@@ -417,9 +444,18 @@ export default function App() {
         }
       }
 
-      setBrands(data.brands || {});
-      setAuditHistory(data.auditHistory || []);
-      setRecurringPatterns(data.recurringPatterns || []);
+      if (data.brands && typeof data.brands === 'object' && Object.keys(data.brands).length > 0) {
+        setBrands(data.brands);
+        try {
+          localStorage.setItem('skynex_cached_brands_v1', JSON.stringify(data.brands));
+        } catch (_) {}
+      }
+      if (Array.isArray(data.auditHistory)) {
+        setAuditHistory(data.auditHistory);
+      }
+      if (Array.isArray(data.recurringPatterns)) {
+        setRecurringPatterns(data.recurringPatterns);
+      }
       if (data.recurrenceConfig) {
         setRecurrenceConfig(data.recurrenceConfig);
         setThresholdForm(data.recurrenceConfig);
@@ -3469,11 +3505,11 @@ export default function App() {
           {/* ========================================================= */}
           {/* PAGE TWO: BRAND KNOWLEDGE WORKSPACE                       */}
           {/* ========================================================= */}
-          {currentView === 'knowledge' && activeBrand && (
+          {currentView === 'knowledge' && (
             <BrandKnowledgeWorkspace
-              activeBrand={activeBrand}
-              brands={brands}
-              activeBrandId={activeBrandId}
+              activeBrand={activeBrand || BRANDS.novapay}
+              brands={brands && Object.keys(brands).length > 0 ? brands : BRANDS}
+              activeBrandId={activeBrandId || 'novapay'}
               currentUser={currentUser}
               onSelectBrand={handleSelectBrand}
               onOpenAddBrandModal={handleOpenAddBrandModal}
@@ -3492,10 +3528,13 @@ export default function App() {
               setRuleSearchQuery={setRuleSearchQuery}
               onNavigateToDna={() => setCurrentView('dna')}
               onBrandUpdated={(updatedBrand: BrandProfile) => {
-                setBrands(prev => ({
-                  ...prev,
-                  [updatedBrand.id]: updatedBrand
-                }));
+                setBrands(prev => {
+                  const next = { ...prev, [updatedBrand.id]: updatedBrand };
+                  try {
+                    localStorage.setItem('skynex_cached_brands_v1', JSON.stringify(next));
+                  } catch (_) {}
+                  return next;
+                });
               }}
               triggerToast={triggerToast}
             />
@@ -3504,15 +3543,18 @@ export default function App() {
           {/* ========================================================= */}
           {/* PAGE TWO-B: BRAND DNA ANALYZER                            */}
           {/* ========================================================= */}
-          {currentView === 'dna' && activeBrand && (
+          {currentView === 'dna' && (
             <BrandDnaWorkspace
-              activeBrand={activeBrand}
+              activeBrand={activeBrand || BRANDS.novapay}
               currentUser={currentUser}
               onBrandUpdated={(updatedBrand: BrandProfile) => {
-                setBrands(prev => ({
-                  ...prev,
-                  [updatedBrand.id]: updatedBrand
-                }));
+                setBrands(prev => {
+                  const next = { ...prev, [updatedBrand.id]: updatedBrand };
+                  try {
+                    localStorage.setItem('skynex_cached_brands_v1', JSON.stringify(next));
+                  } catch (_) {}
+                  return next;
+                });
               }}
               triggerToast={triggerToast}
             />

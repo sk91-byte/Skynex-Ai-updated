@@ -422,26 +422,44 @@ export function isAuthorizedForBrandScope(
   return user.authorizedBrandIds.includes(brandId);
 }
 
+import { handleClientApiFallback } from './clientApiFallback.ts';
+
 /**
  * Shared active user ref and safe fetch wrapper that attaches RBAC headers to `/api/*` calls
  * without mutating the read-only `window.fetch` property in iframe environments.
+ * Seamlessly routes to client-side storage engine when deployed to static CDNs (e.g. skynexstudio.xyz).
  */
 export const activeUserHeaderRef: { current: UserProfile } = {
   current: DEFAULT_USER_PROFILE
 };
 
-export const apiFetch: typeof fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+export const apiFetch: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const baseFetch = typeof window !== 'undefined' ? window.fetch.bind(window) : globalThis.fetch.bind(globalThis);
   const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-  if (urlStr.startsWith('/api/') || urlStr.includes('/api/')) {
+  const isApi = urlStr.startsWith('/api/') || urlStr.includes('/api/');
+
+  if (isApi) {
     const headers = new Headers(init?.headers || {});
     const u = activeUserHeaderRef.current || DEFAULT_USER_PROFILE;
     if (!headers.has('x-user-id')) headers.set('x-user-id', u.id);
     if (!headers.has('x-user-role')) headers.set('x-user-role', u.role);
     if (!headers.has('x-skynex-role')) headers.set('x-skynex-role', u.canonicalRole || u.role);
     if (!headers.has('x-workspace-id')) headers.set('x-workspace-id', u.workspaceId || DEFAULT_WORKSPACE_ID);
-    return baseFetch(input, { ...init, headers });
+
+    try {
+      const res = await baseFetch(input, { ...init, headers });
+      const contentType = res.headers.get('content-type') || '';
+      // If backend responded with valid JSON or API response, return it directly
+      if (!contentType.includes('text/html')) {
+        return res;
+      }
+      // If deployed on static host (like Cloudflare Pages on skynexstudio.xyz), Cloudflare returns index.html for /api/*
+      return handleClientApiFallback(urlStr, init?.method || 'GET', init?.body, headers);
+    } catch (_networkErr) {
+      return handleClientApiFallback(urlStr, init?.method || 'GET', init?.body, headers);
+    }
   }
+
   return baseFetch(input, init);
 };
 
