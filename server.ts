@@ -4141,7 +4141,7 @@ function extractRulesHeuristically(
 function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string }[], filename: string): ExtractedPdfRule[] {
   const rules: ExtractedPdfRule[] = [];
   const idPattern = /^[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}$/;
-  const rowSourcePattern = /\b(Approved|Critical|Warning|Info)\s+([A-Z][A-Z0-9-]+(?:\s+Â§\s*\d+|\s+row\s+\d+))\s*$/i;
+ const rowSourcePattern = /\b(Approved|Critical|Warning|Info)\s+([A-Z][A-Z0-9-]+(?:\s+\u00A7\s*\d+|\s+row\s+\d+))\s*$/i;
   const topicWords = new Set(['Approved knowledge', 'Client separation', 'Conflicting sources', 'Evidence', 'Extraction uncertainty', 'Terminology', 'Claims', 'Disclaimer', 'Product facts', 'Tone & Voice', 'Security']);
 
   for (const page of pagesData) {
