@@ -2000,6 +2000,55 @@ async function extractTextWithTesseract(imageBuffer: Buffer): Promise<{
   }
 }
 
+// OCR multiple image variants so screenshots, resized posters, and compressed
+// uploads remain readable without requiring a specific image layout.
+async function extractTextWithMultiPassOcr(imageBuffer: Buffer): Promise<{
+  text: string;
+  confidence: number;
+  wordBoxes: { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } }[];
+  success: boolean;
+}> {
+  const variants: Buffer[] = [imageBuffer];
+  try {
+    variants.push(
+      await sharp(imageBuffer)
+        .resize({ width: 2200, height: 2200, fit: 'inside', withoutEnlargement: false })
+        .grayscale()
+        .normalize()
+        .sharpen()
+        .png()
+        .toBuffer()
+    );
+    variants.push(
+      await sharp(imageBuffer)
+        .resize({ width: 2200, height: 2200, fit: 'inside', withoutEnlargement: false })
+        .modulate({ saturation: 0.2 })
+        .normalize()
+        .sharpen(1.2)
+        .png()
+        .toBuffer()
+    );
+  } catch (err: any) {
+    console.warn('[SkyNex AI] OCR preprocessing fallback:', err?.message || err);
+  }
+
+  const results = await Promise.all(variants.map(variant => extractTextWithTesseract(variant)));
+  const successful = results.filter(result => result.success && result.text.trim());
+  if (successful.length === 0) return results[0] || { text: '', confidence: 0, wordBoxes: [], success: false };
+
+  const best = [...successful].sort((a, b) => {
+    const scoreA = a.confidence + Math.min(a.text.length, 500) / 20;
+    const scoreB = b.confidence + Math.min(b.text.length, 500) / 20;
+    return scoreB - scoreA;
+  })[0];
+  const lines: string[] = [];
+  for (const result of successful) {
+    for (const line of result.text.split(/\r?\n/).map(value => value.trim()).filter(value => value.length >= 3)) {
+      if (!lines.some(existing => existing.toLowerCase() === line.toLowerCase())) lines.push(line);
+    }
+  }
+  return { text: lines.join('\n'), confidence: best.confidence, wordBoxes: best.wordBoxes, success: true };
+}
 // Multimodal Vision AI: Analyzes advertisement image with Gemini
 async function runGeminiVisionAudit(
   brand: BrandProfile,
@@ -5661,7 +5710,7 @@ app.post('/api/audit-image', async (req: Request, res: Response) => {
 
     // 6. Dual Extraction & Verification Pipeline:
     // Path A: Local OCR Extraction (Tesseract worker)
-    const ocrResult = await extractTextWithTesseract(processedBuffer);
+    const ocrResult = await extractTextWithMultiPassOcr(processedBuffer);
 
     // Path B: Multimodal Vision AI Review (Gemini with timeout and model fallback)
     const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
