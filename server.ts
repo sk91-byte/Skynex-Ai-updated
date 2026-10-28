@@ -4138,6 +4138,132 @@ function extractRulesHeuristically(
   return rules;
 }
 
+function extractStructuredPdfRules(pagesData: { pageNumber: number; text: string }[], filename: string): ExtractedPdfRule[] {
+  const rules: ExtractedPdfRule[] = [];
+  const idPattern = /^[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}$/;
+  const rowSourcePattern = /\b(Approved|Critical|Warning|Info)\s+([A-Z][A-Z0-9-]+(?:\s+Â§\s*\d+|\s+row\s+\d+))\s*$/i;
+  const topicWords = new Set(['Approved knowledge', 'Client separation', 'Conflicting sources', 'Evidence', 'Extraction uncertainty', 'Terminology', 'Claims', 'Disclaimer', 'Product facts', 'Tone & Voice', 'Security']);
+
+  for (const page of pagesData) {
+    const lines = page.text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const headerIndex = lines.findIndex(line => /^Rule ID\s+(Topic|Category)\b/i.test(line));
+    if (headerIndex < 0) continue;
+    const rowIndexes = lines.map((line, index) => idPattern.test(line) ? index : -1).filter(index => index >= 0);
+
+    for (let rowIndex = 0; rowIndex < rowIndexes.length; rowIndex++) {
+      const start = rowIndexes[rowIndex];
+      const end = rowIndexes[rowIndex + 1] || lines.length;
+      const sourceId = lines[start];
+      const block = lines.slice(start + 1, end);
+      const sourceMatchIndex = block.findIndex(line => rowSourcePattern.test(line));
+      if (sourceMatchIndex < 0) continue;
+      const sourceMatch = block[sourceMatchIndex].match(rowSourcePattern);
+      if (!sourceMatch) continue;
+      const severityText = sourceMatch[1].toLowerCase();
+      const sourceRef = sourceMatch[2].trim();
+      const beforeSource = block.slice(0, sourceMatchIndex);
+      if (beforeSource.length < 2) continue;
+
+      let categoryLabel = beforeSource[0];
+      let statementLines = beforeSource.slice(1);
+      const twoLineTopic = `${beforeSource[0]} ${beforeSource[1]}`;
+      if (topicWords.has(twoLineTopic)) {
+        categoryLabel = twoLineTopic;
+        statementLines = beforeSource.slice(2);
+      }
+      if (!topicWords.has(categoryLabel) && /^(Tone|Product)\b/i.test(categoryLabel) && beforeSource.length >= 2) {
+        categoryLabel = twoLineTopic;
+        statementLines = beforeSource.slice(2);
+      }
+      const statement = statementLines.join(' ').replace(/\s+/g, ' ').trim();
+      if (statement.length < 20) continue;
+
+      const categoryRule: ExtractedPdfRule = {
+        id: `EXT-${Date.now()}-${rules.length + 1}`,
+        tempId: `EXT-${Date.now()}-${rules.length + 1}`,
+        title: `${categoryLabel}: ${statement.slice(0, 72)}${statement.length > 72 ? '...' : ''}`,
+        category: 'Legal & Compliance',
+        ruleStatement: statement,
+        targetPatterns: [],
+        approvedValue: statement,
+        severity: severityText === 'critical' ? 'critical' : severityText === 'warning' ? 'warning' : 'info',
+        severityLevel: severityText === 'critical' ? 'Critical' : severityText === 'warning' ? 'Medium' : 'Low',
+        pageNumber: `Page ${page.pageNumber}`,
+        sourcePage: page.pageNumber,
+        sourceDocumentName: filename,
+        sourceSection: sourceId,
+        sourceVerified: true,
+        evidenceExcerpt: statement,
+        sourceExcerpt: statement,
+        sourceRef: composeSourceReference(undefined, filename, String(page.pageNumber), sourceId, 'Brand'),
+        confidenceScore: 0.98,
+        needsManualReview: false,
+        status: 'Draft',
+        isSelected: true,
+        explanation: `Extracted from the structured ${sourceId} row on Page ${page.pageNumber}.`
+      };
+
+      if (/\b(logo|colour|color|palette|font|typography|clear space|lockup)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Visual Identity';
+      else if (/\b(tone|voice|jargon|formal|professional|friendly)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Tone & Style';
+      else if (/\b(prohibited|forbidden|do not claim|must not|disallowed|risk-free|guaranteed)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Prohibited Content';
+      else if (/\b(price|pricing|product name|sku|promotion|claim|performance|fact|metric)\b/i.test(`${categoryLabel} ${statement}`)) categoryRule.category = 'Messaging & Claims';
+      rules.push(categoryRule);
+    }
+  }
+  return rules;
+}
+
+function normalizePdfEvidenceText(value: unknown): string {
+  return String(value || '').replace(/[\u2010-\u2015]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function inferPdfRuleCategory(rule: ExtractedPdfRule): RuleCategory {
+  const text = normalizePdfEvidenceText(`${rule.title} ${rule.ruleStatement} ${rule.approvedValue} ${rule.evidenceExcerpt}`);
+  if (/\b(approved knowledge|client separation|conflicting source|human verification|evidence|source reference|extraction uncertainty|manual review|applicable policy|cross-client|section\/page)\b/.test(text)) return 'Legal & Compliance';
+  if (/\b(logo|colour|color|palette|font|typography|clear space|lockup|visual identity)\b/.test(text)) return 'Visual Identity';
+  if (/\b(tone|voice|jargon|formal|professional|friendly)\b/.test(text)) return 'Tone & Style';
+  if (/\b(prohibited|forbidden|do not claim|must not|disallowed|risk-free|guaranteed)\b/.test(text)) return 'Prohibited Content';
+  if (/\b(price|pricing|product name|sku|promotion|claim|performance|fact|metric)\b/.test(text)) return 'Messaging & Claims';
+  return rule.category || 'Legal & Compliance';
+}
+
+function verifyAndNormalizePdfRules(rules: ExtractedPdfRule[], pagesData: { pageNumber: number; text: string }[], filename: string): ExtractedPdfRule[] {
+  return rules.map((rawRule, index) => {
+    const rule = { ...rawRule };
+    const evidence = String(rule.evidenceExcerpt || rule.sourceExcerpt || rule.ruleStatement || '').trim();
+    const normalizedEvidence = normalizePdfEvidenceText(evidence);
+    let matchingPage: { pageNumber: number; text: string } | undefined;
+    if (normalizedEvidence.length >= 12) matchingPage = pagesData.find(page => normalizePdfEvidenceText(page.text).includes(normalizedEvidence));
+    if (!matchingPage && normalizedEvidence.length >= 12) {
+      const words = normalizedEvidence.split(' ').filter(word => word.length > 4).slice(0, 8);
+      matchingPage = pagesData.find(page => {
+        const pageText = normalizePdfEvidenceText(page.text);
+        return words.length >= 3 && words.filter(word => pageText.includes(word)).length >= 3;
+      });
+    }
+    const suppliedPage = Number(rule.sourcePage || String(rule.pageNumber || '').replace(/[^0-9]/g, ''));
+    const pageNumber = matchingPage?.pageNumber || (suppliedPage >= 1 && suppliedPage <= pagesData.length ? suppliedPage : undefined);
+    const sourceVerified = Boolean(matchingPage && evidence.length >= 12);
+    const confidence = typeof rule.confidenceScore === 'number' ? rule.confidenceScore : 0.5;
+    rule.title = String(rule.title || 'Brand Guideline Rule').replace(/^\s*[A-Z]{2,8}(?:-[A-Z]{2,8})?-\d{3}\s*[:.-]?\s*/i, '').replace(/\s+/g, ' ').trim() || 'Brand Guideline Rule';
+    rule.category = inferPdfRuleCategory(rule);
+    rule.evidenceExcerpt = evidence;
+    rule.sourceExcerpt = evidence;
+    rule.sourcePage = pageNumber;
+    rule.pageNumber = pageNumber ? `Page ${pageNumber}` : undefined;
+    rule.sourceDocumentName = filename;
+    rule.sourceVerified = sourceVerified;
+    rule.needsManualReview = Boolean(rule.needsManualReview) || !sourceVerified || confidence < 0.75;
+    rule.confidenceScore = sourceVerified ? confidence : Math.min(confidence, 0.5);
+    rule.sourceRef = composeSourceReference(undefined, filename, pageNumber ? String(pageNumber) : undefined, rule.sourceSection, 'Brand');
+    rule.explanation = sourceVerified ? `Verified against ${filename}, Page ${pageNumber}.` : `Could not verify the extracted evidence against ${filename}; manual review is required.`;
+    rule.id = rule.id || `EXT-${Date.now()}-${index + 1}`;
+    rule.tempId = rule.tempId || rule.id;
+    rule.status = rule.needsManualReview ? 'Unverified' : 'Draft';
+    return rule;
+  }).filter(rule => rule.ruleStatement.trim().length >= 20 && String(rule.evidenceExcerpt || '').trim().length >= 12);
+}
+
 // AI-Powered PDF Rule Extraction Endpoint
 app.post('/api/extract-rules-from-pdf', async (req: Request, res: Response) => {
   try {
@@ -4207,6 +4333,29 @@ const base64Content = req.body.base64Content || req.body.base64Pdf;
       console.warn('[SkyNex AI] PDFParse error:', parseErr?.message);
     }
 
+    // Protect client isolation: a multi-client pack must not be imported into
+    // one active brand without an explicit section selection.
+    const clientSections = pagesData
+      .map(page => page.text.match(/CLIENT\s+\d+\s*\|\s*([^\n]+)/i)?.[1]?.trim())
+      .filter((section): section is string => Boolean(section));
+    const requestedClientSection = String(req.body.clientSection || '').trim();
+    if (clientSections.length > 1 && !requestedClientSection) {
+      return res.status(422).json({
+        code: 'MULTI_CLIENT_PDF_REQUIRES_SELECTION',
+        error: `This PDF contains multiple client profiles (${clientSections.join(', ')}). Upload one client section at a time or provide an explicit clientSection. No rules were imported.`,
+        clientSections,
+        extractionStatus: 'needs_client_selection'
+      });
+    }
+    if (clientSections.length > 1 && requestedClientSection) {
+      const selected = requestedClientSection.toLowerCase();
+      pagesData = pagesData.filter(page => {
+        const pageText = page.text.toLowerCase();
+        return pageText.includes('agency-level handling rules') || pageText.includes(selected);
+      });
+      extractedText = pagesData.map(page => page.text).join('\n\n');
+    }
+
     // Step 2: Validate readable content
     if (!extractedText || extractedText.trim().length < 30) {
       if (!genAiClient) {
@@ -4220,7 +4369,12 @@ const base64Content = req.body.base64Content || req.body.base64Pdf;
     let extractedRules: ExtractedPdfRule[] = [];
     let aiUsed = false;
 
-    if (genAiClient) {
+    // Prefer deterministic parsing for PDFs with real rule tables. This preserves
+    // IDs, categories, severity, source references, and page evidence exactly.
+    const structuredRules = extractStructuredPdfRules(pagesData, filename);
+    if (structuredRules.length > 0) {
+      extractedRules = structuredRules;
+    } else if (genAiClient) {
       try {
         const promptText = `You are an expert enterprise brand compliance officer and policy architect.
 Analyze the following brand guideline document ("${filename}") for ${brand ? brand.name : 'the brand'}.
@@ -4385,6 +4539,9 @@ ${pagesData.length > 0
     if (extractedRules.length === 0 && extractedText) {
       extractedRules = extractRulesHeuristically(extractedText, pagesData, filename);
     }
+
+    // Verify evidence against the actual PDF pages before approval.
+    extractedRules = verifyAndNormalizePdfRules(extractedRules, pagesData, filename);
     extractedRules = extractedRules.map(rule => ({
   ...rule,
   status: 'Approved' as RuleApprovalStatus,
@@ -8829,4 +8986,3 @@ if (!IS_TEST_PROCESS) {
     process.exit(1);
   });
 }
-
