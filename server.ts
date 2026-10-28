@@ -8638,6 +8638,12 @@ app.post('/api/brands/:brandId/products/extract-image', async (req: Request, res
 
     const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
     const imageBuffer = Buffer.from(cleanBase64, 'base64');
+    if (!imageBuffer.length) {
+      return res.status(400).json({ error: 'The uploaded product image is empty or invalid.' });
+    }
+    if (imageBuffer.length > 10 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Product images must be 10MB or smaller.' });
+    }
 
     // Save uploaded product photo to /public/assets/uploads so it can be displayed in the catalog
     const uploadsDir = path.resolve(__dirname, 'public/assets/uploads');
@@ -8679,8 +8685,14 @@ app.post('/api/brands/:brandId/products/extract-image', async (req: Request, res
     }
 
     // 2. Run local OCR via Tesseract to capture visible label/packaging text
-    const ocrResult = await extractTextWithTesseract(imageBuffer);
-    const ocrText = (ocrResult.text || '').trim();
+    let ocrText = '';
+    try {
+      const ocrResult = await extractTextWithTesseract(imageBuffer);
+      ocrText = (ocrResult.text || '').trim();
+    } catch (ocrErr: any) {
+      console.warn('[SkyNex AI] Product image OCR fallback:', ocrErr?.message || ocrErr);
+    }
+
 
     // 3. Try Gemini Multimodal Vision + OCR extraction (gemini-3.8-flash)
     let aiExtracted: any = null;
