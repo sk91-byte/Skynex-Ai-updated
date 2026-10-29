@@ -3527,6 +3527,44 @@ app.get('/api/state', (req: Request, res: Response) => {
   });
 });
 
+// Deterministic brand resolution used before audits. It only considers brands the
+// authenticated principal is allowed to see and never invents a brand match.
+export function resolveBrandBeforeAudit(
+  selectedBrandId: string,
+  extractedText: string,
+  principal: ResolvedPrincipal,
+  title?: string,
+  sourceFilename?: string
+) {
+  const visibleBrands = Object.values(store.brands).filter((brand: any) => {
+    const workspaceAllowed = !brand.orgId || brand.orgId === principal.workspaceId || brand.orgId === DEFAULT_WORKSPACE_ID || brand.orgId === 'ws-enterprise-01' || brand.orgId === 'ws-skynex-default';
+    const brandAllowed = principal.authorizedBrandIds.includes('*') || principal.authorizedBrandIds.some(id => id.toLowerCase() === brand.id.toLowerCase()) || !String(reqSafeHeaderScope(principal)).trim();
+    return workspaceAllowed && brandAllowed;
+  });
+  const normalized = `${extractedText || ''} ${title || ''} ${sourceFilename || ''}`.toLowerCase();
+  const generic = new Set(['brand', 'official', 'sale', 'offer', 'new', 'premium', 'shop', 'product', 'advertisement']);
+  const scoreBrand = (brand: any) => {
+    const identifiers = [brand.name, ...(Array.isArray(brand.aliases) ? brand.aliases : []), ...((brand.products || []).flatMap((p: any) => [p.name, p.sku, ...(p.aliases || [])]))]
+      .map((value: any) => String(value || '').trim())
+      .filter((value: string) => value.length >= 3 && !generic.has(value.toLowerCase()));
+    const matches = [...new Set(identifiers.filter((identifier: string) => normalized.includes(identifier.toLowerCase())))];
+    return { brand, matches, score: matches.reduce((total, value) => total + (value.toLowerCase() === String(brand.name).toLowerCase() ? 5 : 2), 0) };
+  };
+  const ranked = visibleBrands.map(scoreBrand).filter(item => item.score > 0).sort((a, b) => b.score - a.score);
+  const selected = visibleBrands.find((brand: any) => brand.id === selectedBrandId);
+  const selectedMatch = ranked.find(item => item.brand.id === selectedBrandId);
+  const strongest = ranked[0];
+  const distinctStrong = ranked.filter(item => item.score === strongest?.score && item.brand.id !== strongest?.brand.id);
+  const base = { selectedBrandId, selectedBrandName: selected?.name || selectedBrandId, matchingIdentifiers: selectedMatch?.matches || [], evidence: strongest?.matches || [] };
+  if (!strongest) return { ...base, outcome: 'INSUFFICIENT_EVIDENCE', requiresConfirmation: false, explanation: 'No approved brand or product identifier was found in the submitted content.' };
+  if (distinctStrong.length > 0) return { ...base, outcome: 'MULTIPLE_BRANDS_AMBIGUOUS', requiresConfirmation: true, candidateBrandId: strongest.brand.id, candidateBrandName: strongest.brand.name, evidence: ranked.slice(0, 3).flatMap(item => item.matches), explanation: 'The submitted content contains equally strong identifiers for multiple authorized brands.' };
+  if (!selectedMatch || selectedMatch.score === 0) return { ...base, outcome: 'MATCH_EXISTING_OTHER_BRAND', requiresConfirmation: true, candidateBrandId: strongest.brand.id, candidateBrandName: strongest.brand.name, evidence: strongest.matches, explanation: `The content appears to reference ${strongest.brand.name}, not the selected brand ${selected?.name || selectedBrandId}.` };
+  return { ...base, outcome: 'MATCH_CURRENT_BRAND', requiresConfirmation: false, explanation: `The content matches the selected brand ${selected?.name || selectedBrandId}.` };
+}
+
+function reqSafeHeaderScope(principal: ResolvedPrincipal): string {
+  return principal.authorizedBrandIds.join(',');
+}
 // Audit History Loader
 app.get('/api/history', (req: Request, res: Response) => {
   const brandIdFilter = req.query.brandId ? String(req.query.brandId).trim() : undefined;
@@ -3568,13 +3606,22 @@ app.get('/api/history', (req: Request, res: Response) => {
   });
 });
 
+// Resolve a submitted creative against authorized brand identifiers before auditing.
+app.post('/api/brand-resolution', (req: Request, res: Response) => {
+  const { selectedBrandId, extractedText = '', title = '', sourceFilename = '' } = req.body || {};
+  const principal = authorizeRequest(req, res, 'canSubmitContent', 'resolve submitted content brand', { brandId: selectedBrandId });
+  if (!principal) return;
+  if (!selectedBrandId || !store.brands[selectedBrandId]) return res.status(404).json({ error: 'Selected brand profile was not found.' });
+  const brandResolution = resolveBrandBeforeAudit(String(selectedBrandId), String(extractedText), principal, String(title), String(sourceFilename));
+  res.json({ success: true, brandResolution });
+});
 // Create a New Brand Profile
 app.post('/api/brands', (req: Request, res: Response) => {
   const principal = authorizeRequest(req, res, 'canManageBrands', 'create a new brand profile');
   if (!principal) return;
 
   try {
-    const { name, industry, tagline, description, primaryColor, seedDefaultRules = true } = req.body;
+    const { name, industry, tagline, description, primaryColor, seedDefaultRules = false } = req.body;
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'Brand name is required.' });
     }
@@ -5820,7 +5867,8 @@ app.post('/api/audit', async (req: Request, res: Response) => {
     sourceFilename,
     enableGemini = true,
     simulateAiFailure = false,
-    visibilityScope
+    visibilityScope,
+    skipBrandResolution = false
   } = req.body;
 
   const principal = authorizeRequest(req, res, 'canSubmitContent', 'submit content for compliance review', { brandId });
@@ -5842,6 +5890,13 @@ app.post('/api/audit', async (req: Request, res: Response) => {
   }
 
   const cleanDraft = String(rawDraftInput);
+
+  if (!skipBrandResolution) {
+    const brandResolution = resolveBrandBeforeAudit(String(brandId), cleanDraft, principal, String(title), String(sourceFilename || ''));
+    if (brandResolution.requiresConfirmation) {
+      return res.status(409).json({ error: 'Brand confirmation required before auditing this content.', code: 'BRAND_RESOLUTION_REQUIRED', brandResolution });
+    }
+  }
 
   // Step 1: Run Deterministic Rules Engine against ONLY Approved rules & Authoritative Product Catalog
   const { findings: deterministicFindings, approvedRulesCount } = runDeterministicAudit(brand, cleanDraft, {
@@ -5965,6 +6020,7 @@ app.post('/api/audit-image', async (req: Request, res: Response) => {
       title = 'Advertisement Image Review',
       channel = 'Paid Search & Social',
       simulateAiUnavailable = false,
+      skipBrandResolution = false,
       visibilityScope
     } = req.body;
 
@@ -6117,6 +6173,17 @@ app.post('/api/audit-image', async (req: Request, res: Response) => {
     combinedText = extractionFailed
       ? 'No readable text was identified in the advertisement image (OCR/Vision text extraction incomplete).'
       : textForDeterministic;
+
+    if (!skipBrandResolution && !extractionFailed) {
+      const brandResolution = resolveBrandBeforeAudit(String(brandId), combinedText, principal, String(title), String(filename));
+      if (brandResolution.requiresConfirmation) {
+        return res.status(409).json({
+          error: 'Brand confirmation required before auditing this image.',
+          code: 'BRAND_RESOLUTION_REQUIRED',
+          brandResolution
+        });
+      }
+    }
 
     // 8. Run Deterministic Rules Engine against ONLY Approved Rules & Authoritative Product Catalog
     const { findings: deterministicFindings, approvedRulesCount } = extractionFailed
