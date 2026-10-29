@@ -1354,7 +1354,7 @@ const verifiedProductPriceRanges: { startIndex: number; endIndex: number }[] = [
       Math.abs(check.expectedPrice - check.observedPrice) > 0.01;
     const invalidFullDiscount = check.discountType === 'percentage' && check.discountPercent === 100 && check.observedPrice !== null && check.observedPrice !== 0;
     const invalidFixedDiscount = check.discountType === 'fixed_amount' && check.basePrice !== null && check.discountAmount !== null && check.discountAmount > check.basePrice;
-    const shouldFlag = Boolean(check.unsupportedPromotion) || invalidPercent || missingBase || missingFinalPrice || arithmeticMismatch || invalidFullDiscount || invalidFixedDiscount;
+    const shouldFlag = Boolean(check.unsupportedPromotion) || invalidPercent || arithmeticMismatch || invalidFullDiscount || invalidFixedDiscount;
 
     if (check.basePrice !== null && (check.observedPrice !== null || check.discountPercent === 100 || check.discountType === 'fixed_amount')) {
 discountObservedPriceRanges.push({
@@ -1628,6 +1628,13 @@ discountObservedPriceRanges.push({
       continue;
     }
 
+    // Subscription pricing rules are only applicable when the draft is actually
+    // about a subscription/plan. They must not contaminate physical-product or
+    // unrelated brand reviews.
+    const ruleContext = `${rule.title} ${rule.ruleStatement} ${rule.approvedValue}`;
+    const isSubscriptionPricingRule = rule.category === 'Pricing & Facts' && /subscription|plan|per\s+month|monthly|enterprise\s+rate/i.test(ruleContext);
+    const draftHasSubscriptionContext = /subscription|plan|per\s+month|monthly|enterprise\s+rate/i.test(draftText);
+    if (isSubscriptionPricingRule && !draftHasSubscriptionContext) continue;
     // Required disclaimer rules must also fail when the required wording is absent.
     const requiredDisclaimer = rule.ruleStatement.match(/must include:\s*[“"]?([^”"]+?)[”"]?(?:\.|$)/i);
     if (requiredDisclaimer && !draftText.toLowerCase().includes(requiredDisclaimer[1].toLowerCase())) {
@@ -1914,7 +1921,8 @@ discountObservedPriceRanges.push({
 // Reconcile Deterministic and AI findings without duplicating spans or weakening deterministic facts
 export function reconcileAuditFindings(
   deterministicFindings: AuditFinding[],
-  aiFindings: AuditFinding[]
+  aiFindings: AuditFinding[],
+  authorizedRuleIds?: Set<string>
 ): AuditFinding[] {
   const reconciled: AuditFinding[] = [];
   const seenDetKeys = new Set<string>();
@@ -1928,6 +1936,9 @@ export function reconcileAuditFindings(
   }
 
   for (const ai of aiFindings) {
+    // Production callers provide the current audit knowledge IDs. An AI finding
+    // without a current approved rule/product reference cannot enter the report.
+    if (authorizedRuleIds && (!ai.ruleId || !authorizedRuleIds.has(ai.ruleId))) continue;
     const spanLower = (ai.originalSpan || '').trim().toLowerCase();
     if (!spanLower) continue;
 
@@ -2029,7 +2040,11 @@ export function validateAndFilterGeminiContextualResponse(
     const verifiedProduct = citedId && !verifiedRule ? activeProductMap.get(citedId) : undefined;
     const hasInventedReference = Boolean(citedId && !verifiedRule && !verifiedProduct);
 
-    // If AI invented an unknown rule ID, do NOT attach an unrelated approved rule ID! Downgrade to unverified human review.
+    // Unknown, cross-brand, draft, expired, or missing references are ignored.
+    // They are not brand findings and must not be converted into generic human-review issues.
+    if (!verifiedRule && !verifiedProduct) continue;
+
+    // If AI invented an unknown rule ID, do NOT attach an unrelated approved rule ID!
     const isUnsupportedOrUnverified =
       hasInventedReference ||
       issue.classification === 'unsupported_claim' ||
@@ -2067,8 +2082,8 @@ export function validateAndFilterGeminiContextualResponse(
       classification: resolvedClassification,
       findingStatus: isUnsupportedOrUnverified ? 'needs_verification' : 'detected',
       validationState: verifiedRule || verifiedProduct ? 'validated_ai_reference' : 'downgraded_unverified',
-      category: verifiedRule?.category || issue.category || 'Performance & Claims',
-      severity: isUnsupportedOrUnverified ? 'warning' : 'info',
+      category: verifiedRule?.category || (verifiedProduct ? 'Pricing & Facts' : issue.category || 'Performance & Claims'),
+      severity: verifiedRule?.severity || (verifiedProduct ? 'critical' : 'warning'),
       originalSpan: span,
       startIndex,
       endIndex,
@@ -2096,7 +2111,8 @@ export function validateAndFilterGeminiContextualResponse(
     });
   }
 
-  const deduplicated = reconcileAuditFindings(deterministicFindings, additionalFindings).filter(
+  const authorizedRuleIds = new Set<string>([...approvedRules.map(r => r.id), ...activeProducts.map(p => p.sku)]);
+  const deduplicated = reconcileAuditFindings(deterministicFindings, additionalFindings, authorizedRuleIds).filter(
     f => f.engine === 'gemini'
   );
 
@@ -2676,6 +2692,16 @@ INSTRUCTIONS:
       for (let idx = 0; idx < rawJson.visualIssues.length; idx++) {
         const item = rawJson.visualIssues[idx];
         if (!item.elementLabel || !item.explanation) continue;
+
+        // Ignore AI visual observations that cannot be tied to an approved rule or guideline.
+        const citedVisualSource = typeof item.citation === 'string' ? item.citation.trim().toLowerCase() : '';
+        const knownVisualSource = [...approvedRules.map(r => r.sourceRef), ...(liveBrand.visualGuidelines || []).map(g => g.sourceRef)]
+          .filter(Boolean)
+          .some(source => {
+            const sourceLower = source.toLowerCase();
+            return Boolean(citedVisualSource) && (sourceLower.includes(citedVisualSource) || citedVisualSource.includes(sourceLower));
+          });
+        if (!knownVisualSource) continue;
 
         let bBox: BoundingBox | undefined;
         if (typeof item.boxYmin === 'number' && typeof item.boxXmin === 'number') {
@@ -5840,7 +5866,11 @@ app.post('/api/audit', async (req: Request, res: Response) => {
     );
   }
 
-  const allFindings = reconcileAuditFindings(deterministicFindings, geminiResult.additionalFindings);
+  const authorizedRuleIds = new Set<string>([
+    ...(brand.rules || []).filter(r => isApprovedAndCompleteRule(r, brand.id)).map(r => r.id),
+    ...(brand.products || []).filter(p => p && p.status === 'Active').map(p => p.sku)
+  ]);
+  const allFindings = reconcileAuditFindings(deterministicFindings, geminiResult.additionalFindings, authorizedRuleIds);
 
   // Determine overall status honestly (Requirement 8: Never use absence of detected issues or AI failure to claim full compliance)
   let overallStatus: ReviewStatusOutcome = 'no_issues_detected';
