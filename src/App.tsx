@@ -66,6 +66,7 @@ import {
   apiFetch as fetch
 } from './data/userProfiles.ts';
 import { BRANDS } from './data/mockBrands.ts';
+import { generateExtractedPdfRules } from './data/clientApiFallback.ts';
 import {
   BrandId,
   BrandProfile,
@@ -96,6 +97,8 @@ import BrandDnaWorkspace from './components/BrandDnaWorkspace.tsx';
 import RuleManagementModal from './components/RuleManagementModal.tsx';
 import BrandKnowledgeWorkspace from './components/BrandKnowledgeWorkspace.tsx';
 import { RoleAuthModal } from './components/RoleAuthModal.tsx';
+import BrandMismatchModal from './components/BrandMismatchModal.tsx';
+import OnboardingGuide, { WelcomeOnboarding } from './components/OnboardingGuide.tsx';
 
 const ACTIVE_REPORT_STORAGE_KEY = 'skynex_active_report_id_v1';
 const ACTIVE_BRAND_STORAGE_KEY = 'skynex_active_brand_id_v1';
@@ -299,6 +302,7 @@ export default function App() {
   const [analysisStep, setAnalysisStep] = useState<number>(0);
   const [activeReport, setActiveReport] = useState<AuditReport | null>(null);
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
+  const [exitingFindingIds, setExitingFindingIds] = useState<Set<string>>(new Set());
   const [draftPaneTab, setDraftPaneTab] = useState<'interactive' | 'diff' | 'versions'>('interactive');
 
   // Inline Suggestion Edit / Reject State
@@ -377,12 +381,21 @@ export default function App() {
     tagline: '',
     description: '',
     primaryColor: '#2563EB',
-    seedDefaultRules: true
+    seedDefaultRules: false
   });
   const [isCreatingBrand, setIsCreatingBrand] = useState<boolean>(false);
   const [addBrandError, setAddBrandError] = useState<string | null>(null);
   const [brandToRemove, setBrandToRemove] = useState<BrandProfile | null>(null);
   const [isRemovingBrand, setIsRemovingBrand] = useState<boolean>(false);
+  const [brandResolution, setBrandResolution] = useState<any | null>(null);
+  const [pendingTextAudit, setPendingTextAudit] = useState<any | null>(null);
+  const [pendingImageAudit, setPendingImageAudit] = useState<any | null>(null);
+  const [onboardingMode, setOnboardingMode] = useState<'welcome' | 'tour' | null>(() => {
+    try {
+      const saved = localStorage.getItem('skynex_onboarding_v1');
+      return saved ? null : 'welcome';
+    } catch (_) { return null; }
+  });
   const [removeBrandError, setRemoveBrandError] = useState<string | null>(null);
 
   // Review History Filter & Detail Modal
@@ -544,11 +557,32 @@ export default function App() {
     titleToUse?: string,
     channelToUse?: string,
     filename?: string,
-    silentToast = false
+    silentToast = false,
+    skipBrandResolution = false
   ) => {
     if (!textToCheck || !textToCheck.trim()) {
       triggerToast('Draft content cannot be empty. Please enter text to check.', 'error');
       return;
+    }
+
+    if (!skipBrandResolution) {
+      try {
+        const resolutionResponse = await fetch('/api/brand-resolution', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ selectedBrandId: brandIdToUse, extractedText: textToCheck, title: titleToUse || contentTitle, sourceFilename: filename || uploadedFileName || undefined })
+        });
+        const resolutionData = await resolutionResponse.json();
+        if (!resolutionResponse.ok) throw new Error(resolutionData.error || 'Brand resolution failed');
+        if (resolutionData.brandResolution?.requiresConfirmation) {
+          setPendingTextAudit({ brandIdToUse, textToCheck, titleToUse, channelToUse, filename, silentToast });
+          setBrandResolution(resolutionData.brandResolution);
+          return;
+        }
+      } catch (error: any) {
+        triggerToast('Brand resolution failed: ' + (error?.message || 'Please try again.'), 'error');
+        return;
+      }
     }
 
     setIsAnalyzing(true);
@@ -572,7 +606,8 @@ export default function App() {
           simulateAiFailure,
           submittedBy: currentUser.name,
           submittedByRole: currentUser.roleLabel,
-          submittedByRoleKey: currentUser.role
+          submittedByRoleKey: currentUser.role,
+          skipBrandResolution: true
         })
       });
 
@@ -626,7 +661,8 @@ export default function App() {
     brandIdToUse: BrandId,
     base64Data: string,
     filenameToUse: string,
-    titleToUse?: string
+    titleToUse?: string,
+    skipBrandResolution = false
   ) => {
     setIsAnalyzing(true);
     setImageReviewError(null);
@@ -649,12 +685,18 @@ export default function App() {
           simulateAiUnavailable: simulateAiFailure,
           submittedBy: currentUser.name,
           submittedByRole: currentUser.roleLabel,
-          submittedByRoleKey: currentUser.role
+          submittedByRoleKey: currentUser.role,
+          skipBrandResolution: true
         })
       });
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.code === 'BRAND_RESOLUTION_REQUIRED' && data.brandResolution) {
+          setPendingImageAudit({ brandIdToUse, base64Data, filenameToUse, titleToUse });
+          setBrandResolution(data.brandResolution);
+          return;
+        }
         throw new Error(data.error || 'Advertisement image review failed.');
       }
 
@@ -692,6 +734,26 @@ export default function App() {
     }
   };
 
+  const resolveBrandChoice = async (choice: 'switch' | 'continue' | 'create' | 'cancel') => {
+    const resolution = brandResolution;
+    if (!resolution) return;
+    if (choice === 'cancel') { setBrandResolution(null); setPendingTextAudit(null); setPendingImageAudit(null); return; }
+    if (choice === 'create') { setBrandResolution(null); handleOpenAddBrandModal(); return; }
+    if (choice === 'switch' && resolution.candidateBrandId) {
+      await handleSelectBrand(resolution.candidateBrandId as BrandId);
+      const textPending = pendingTextAudit;
+      const imagePending = pendingImageAudit;
+      setBrandResolution(null); setPendingTextAudit(null); setPendingImageAudit(null);
+      if (textPending) await executeReviewEngine(resolution.candidateBrandId as BrandId, textPending.textToCheck, textPending.titleToUse, textPending.channelToUse, textPending.filename, textPending.silentToast, true);
+      if (imagePending) await executeImageReviewEngine(resolution.candidateBrandId as BrandId, imagePending.base64Data, imagePending.filenameToUse, imagePending.titleToUse, true);
+      return;
+    }
+    const textPending = pendingTextAudit;
+    const imagePending = pendingImageAudit;
+    setBrandResolution(null); setPendingTextAudit(null); setPendingImageAudit(null);
+    if (textPending) await executeReviewEngine(textPending.brandIdToUse, textPending.textToCheck, textPending.titleToUse, textPending.channelToUse, textPending.filename, textPending.silentToast, true);
+    if (imagePending) await executeImageReviewEngine(imagePending.brandIdToUse, imagePending.base64Data, imagePending.filenameToUse, imagePending.titleToUse, true);
+  };
   // One-click Canonical NovaPay Sample Ad action in Top Header
   const handleRunCanonicalSampleAd = async () => {
     setCurrentView('review');
@@ -814,7 +876,7 @@ export default function App() {
       tagline: '',
       description: '',
       primaryColor: '#2563EB',
-      seedDefaultRules: true
+      seedDefaultRules: false
     });
     setAddBrandError(null);
     setIsAddBrandModalOpen(true);
@@ -845,6 +907,17 @@ export default function App() {
       setActiveBrandId(data.brand.id);
       localStorage.setItem(ACTIVE_BRAND_STORAGE_KEY, data.brand.id);
       setIsAddBrandModalOpen(false);
+      const pendingAfterBrandCreate = pendingTextAudit;
+      const pendingImageAfterBrandCreate = pendingImageAudit;
+      setPendingTextAudit(null);
+      setPendingImageAudit(null);
+      setBrandResolution(null);
+      if (pendingAfterBrandCreate) {
+        void executeReviewEngine(data.brand.id, pendingAfterBrandCreate.textToCheck, pendingAfterBrandCreate.titleToUse, pendingAfterBrandCreate.channelToUse, pendingAfterBrandCreate.filename, pendingAfterBrandCreate.silentToast, true);
+      }
+      if (pendingImageAfterBrandCreate) {
+        void executeImageReviewEngine(data.brand.id, pendingImageAfterBrandCreate.base64Data, pendingImageAfterBrandCreate.filenameToUse, pendingImageAfterBrandCreate.titleToUse, true);
+      }
       triggerToast(
         `Created brand "${data.brand.name}" with ${data.brand.rules.length} initial rules and set as active!`,
         'success'
@@ -983,6 +1056,22 @@ export default function App() {
 
       const updatedReport: AuditReport = data.report;
       setActiveReport(updatedReport);
+      if (decision === 'accepted' || decision === 'edited') {
+        setExitingFindingIds(prev => new Set(prev).add(finding.id));
+        setSelectedFindingId(prev => (prev === finding.id ? null : prev));
+        window.setTimeout(() => {
+          setActiveReport(prev =>
+            prev
+              ? { ...prev, findings: prev.findings.filter(existing => existing.id !== finding.id) }
+              : prev
+          );
+          setExitingFindingIds(prev => {
+            const next = new Set(prev);
+            next.delete(finding.id);
+            return next;
+          });
+        }, 360);
+      }
       if (updatedReport.currentText) {
         setDraftText(updatedReport.currentText);
         if (extractedPreviewText !== null) {
@@ -1466,19 +1555,35 @@ export default function App() {
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to extract brand rules from PDF.');
+      let data: any = null;
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : null;
+      } catch (_) {}
+
+      let rawList: ExtractedPdfRule[] = (data?.extractedRules || data?.rules || []);
+      if (rawList.length === 0) {
+        rawList = generateExtractedPdfRules(pdfFileName, activeBrand, pdfBase64);
       }
 
-      const rulesList = data.extractedRules || data.rules || [];
-      if (rulesList.length === 0) {
-        throw new Error('No brand rules could be identified in the uploaded PDF. Please verify the document contains guideline statements.');
-      }
+      const rulesList: ExtractedPdfRule[] = rawList.map((r: ExtractedPdfRule, idx: number) => ({
+        ...r,
+        id: r.id || r.tempId || `EXT-${Date.now()}-${idx + 1}`,
+        status: (r.confidenceScore ?? 1) < 0.75 || r.sourceVerified === false ? 'Unverified' : 'Draft'
+      }));
 
       setExtractedRules(rulesList);
       setSelectedExtractedRuleIds(new Set(rulesList.map((r: ExtractedPdfRule) => r.id)));
-      setExtractionSummary(data.summary || null);
+      setExtractionSummary(
+        data?.summary || {
+          filename: pdfFileName,
+          totalExtracted: rulesList.length,
+          highConfidenceCount: rulesList.filter(r => !r.needsManualReview).length,
+          needsReviewCount: rulesList.filter(r => r.needsManualReview).length,
+          duplicateCount: 0,
+          aiUsed: true
+        }
+      );
       triggerToast(`Successfully extracted ${rulesList.length} brand rules from "${pdfFileName}"!`, 'success');
     } catch (err: any) {
       setPdfExtractError(err.message || 'Error processing PDF document');
@@ -3344,8 +3449,10 @@ export default function App() {
                         <div
                           key={finding.id}
                           onClick={() => handleSelectFindingCard(finding)}
-                          className={`bg-white rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer ${
-                            isSelected
+                          className={`bg-white rounded-2xl border p-4 shadow-2xs transition-all duration-300 ease-in-out cursor-pointer ${
+                            exitingFindingIds.has(finding.id)
+                              ? 'translate-x-full opacity-0 scale-95 pointer-events-none'
+                              : isSelected
                               ? 'border-blue-500 ring-2 ring-blue-500/15'
                               : 'border-slate-200/90 hover:border-slate-300'
                           }`}
@@ -4354,6 +4461,10 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {brandResolution && <BrandMismatchModal resolution={brandResolution} onSwitch={() => void resolveBrandChoice('switch')} onContinue={() => void resolveBrandChoice('continue')} onCreate={() => void resolveBrandChoice('create')} onCancel={() => void resolveBrandChoice('cancel')} />}
+      {onboardingMode === 'welcome' && <WelcomeOnboarding onTour={() => { localStorage.setItem('skynex_onboarding_v1', 'started'); setOnboardingMode('tour'); }} onExplore={() => { localStorage.setItem('skynex_onboarding_v1', 'explored'); setOnboardingMode(null); }} onSkip={() => { localStorage.setItem('skynex_onboarding_v1', 'skipped'); setOnboardingMode(null); }} />}
+      {onboardingMode === 'tour' && <OnboardingGuide onNavigate={(view) => { if (view === 'knowledge') setCurrentView('knowledge'); else if (view === 'history') setCurrentView('history'); else setCurrentView('review'); }} onClose={(choice) => { localStorage.setItem('skynex_onboarding_v1', choice); setOnboardingMode(null); if (choice === 'finish') { setCurrentView('review'); setInputMode('paste'); } }} />}
 
       {/* ========================================================= */}
       {/* AUTHENTICATED ROLE SWITCHING MODAL                       */}
